@@ -59,7 +59,7 @@
     root.innerHTML = `
       <div class="mvs-screen mvs-screen--landing">
         <p class="mvs-eyebrow">${CONTENT.meta.shortName}</p>
-        <a href="home.html" class="mvs-meta-line">&larr; Team overlay or blind-spot exercise instead?</a>
+        <a href="index.html" class="mvs-meta-line">&larr; Team overlay or blind-spot exercise instead?</a>
         <h1>${escapeHtml(c.title)}</h1>
         <p class="mvs-lead">${escapeHtml(c.intro)}</p>
         <div class="mvs-callout">

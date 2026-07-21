@@ -353,7 +353,7 @@
         <p class="mvs-eyebrow">${CONTENT.meta.shortName}</p>
         <h1>${escapeHtml(c.title)}</h1>
         <p class="mvs-lead mvs-print-hide">${escapeHtml(c.intro)}</p>
-        <a href="home.html" class="mvs-meta-line mvs-print-hide">&larr; Back to home</a>
+        <a href="index.html" class="mvs-meta-line mvs-print-hide">&larr; Back to home</a>
 
         <section class="mvs-section mvs-print-hide" id="mvs-guess-section"></section>
         <section class="mvs-section" id="mvs-reveal-section"></section>

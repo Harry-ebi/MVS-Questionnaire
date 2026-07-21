@@ -55,7 +55,7 @@ const CONTENT = {
       {
         title: "Solo reflection",
         body: "The core 5–8 minute questionnaire, just for you.",
-        href: "index.html",
+        href: "reflection.html",
         cta: "Start solo reflection",
         accent: "reflection",
         icon: "reflection",

@@ -48,7 +48,7 @@
         <p class="mvs-eyebrow">${CONTENT.meta.shortName}</p>
         <h1>${escapeHtml(c.pageTitle)}</h1>
         <p class="mvs-lead">${escapeHtml(c.intro)}</p>
-        <a href="home.html" class="mvs-meta-line">&larr; Back to home</a>
+        <a href="index.html" class="mvs-meta-line">&larr; Back to home</a>
 
         <section class="mvs-section">
           <h2 class="mvs-section-title">${escapeHtml(c.methodsHeading)}</h2>
@@ -206,7 +206,7 @@
       <div class="mvs-screen">
         <p class="mvs-eyebrow">${CONTENT.meta.shortName}</p>
         <h1>${escapeHtml(c.resultHeading(meLabel))}</h1>
-        <a href="home.html" class="mvs-meta-line mvs-print-hide">&larr; Back to home</a>
+        <a href="index.html" class="mvs-meta-line mvs-print-hide">&larr; Back to home</a>
 
         <section class="mvs-section">
           <p class="mvs-note">${escapeHtml(c.resultIntro(meLabel, sourceLine))}</p>

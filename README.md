@@ -34,7 +34,7 @@ a result file.
 
 There's no server process to start. Two ways to use it:
 
-**Simplest — open the files directly.** Open `home.html` in a browser
+**Simplest — open the files directly.** Open `index.html` in a browser
 (double-click it, or File → Open). Everything works from `file://` links.
 
 **If you want a normal web address** (for example to host this on a
@@ -46,13 +46,16 @@ For local testing during development, any static file server works, e.g.:
 
 ```bash
 python3 -m http.server 8080
-# then open http://localhost:8080/home.html
+# then open http://localhost:8080/
 ```
 
 Pages:
-- `home.html` — hub linking to all four flows below, with a short "what
-  this is / what it's for / what it isn't" explainer above the links.
-- `index.html` — the solo reflection.
+- `index.html` — hub/home page linking to all four flows below, with a
+  short "what this is / what it's for / what it isn't" explainer above the
+  links. Named `index.html` (rather than `home.html`) so it's the page
+  that loads automatically at the site's root address on any static host,
+  including GitHub Pages.
+- `reflection.html` — the solo reflection.
 - `guide.html` — the communication guide ("Working with other colours").
 - `team.html` — load everyone's result files and see the team overlay.
 - `guess.html` — the blind-spot (perception) exercise: guessing, then reveal.
@@ -151,7 +154,7 @@ values below were sampled directly from the swatch pixels instead:
   `<head>`), matching the guide's specified "Web Font" exactly. The guide's
   "Corporate Font" (Avenir) is for print/stationery, not relevant here.
 
-The home page's banner (`.mvs-hero-band` in `home.html`) is a deliberate
+The home page's banner (`.mvs-hero-band` in `index.html`) is a deliberate
 callback to the Style Guide's own stationery back-cover treatment (business
 card and letterhead backs, pages 7-8): a solid Dark Purple panel with a
 Light Purple rounded-corner shape overlapping it, white logo on top. Every
@@ -172,7 +175,7 @@ earlier version of this page. The four icon colours
 are deliberately varied rather than brand purple/green throughout, so each
 tile reads as a distinct app at a glance — the same idea as the varied
 icon colours on ebi's own app tiles. The icons themselves are small
-hand-drawn inline SVGs (`ICONS` in `home.html`), not a reproduction of
+hand-drawn inline SVGs (`ICONS` in `index.html`), not a reproduction of
 ebi's own icon set, which this app doesn't have access to.
 
 Chart colours (`--series-people` / `--series-performance` / `--series-process`)
