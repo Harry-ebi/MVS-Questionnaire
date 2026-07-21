@@ -127,15 +127,37 @@
     });
   }
 
+  function typeLabel(r) {
+    return r.recordType === "pressure" ? c.typePressure : c.typeEveryday;
+  }
+
+  function shiftLabel(r) {
+    if (r.recordType !== "pressure" || !r.shiftBand) return c.shiftNone;
+    const bandLabel = CONTENT.pressureResults.shiftBandLabels[r.shiftBand] || r.shiftBand;
+    return `${bandLabel} (${r.shiftScore})`;
+  }
+
   function toCsv(records) {
-    const header = [c.colName, c.colResult, c.colPeople, c.colPerformance, c.colProcess, c.colTeamCode, c.colSubmitted];
+    const header = [
+      c.colName,
+      c.colType,
+      c.colResult,
+      c.colPeople,
+      c.colPerformance,
+      c.colProcess,
+      c.colShift,
+      c.colTeamCode,
+      c.colSubmitted,
+    ];
     const escapeCsv = (v) => `"${String(v).replace(/"/g, '""')}"`;
     const rows = records.map((r) => [
       r.name,
+      typeLabel(r),
       CONTENT.categoryContent[r.category] ? CONTENT.categoryContent[r.category].label : r.category,
       r.percentages.people,
       r.percentages.performance,
       r.percentages.process,
+      shiftLabel(r),
       r.teamCode || "",
       r.exportedAt || "",
     ]);
@@ -155,9 +177,9 @@
     setTimeout(() => URL.revokeObjectURL(url), 2000);
   }
 
-  function renderTable(records) {
+  function renderTable(records, totalCount) {
     if (!records.length) {
-      return `<p class="mvs-lead">${escapeHtml(c.tableEmpty)}</p>`;
+      return `<p class="mvs-lead">${escapeHtml(totalCount ? c.filterNoMatches : c.tableEmpty)}</p>`;
     }
 
     const sorted = records.slice().sort((a, b) => {
@@ -172,30 +194,44 @@
         return `
           <tr>
             <td>${escapeHtml(r.name)}</td>
+            <td>${escapeHtml(typeLabel(r))}</td>
             <td>${escapeHtml(label)}</td>
             <td>${escapeHtml(r.percentages.people)}%</td>
             <td>${escapeHtml(r.percentages.performance)}%</td>
             <td>${escapeHtml(r.percentages.process)}%</td>
+            <td>${escapeHtml(shiftLabel(r))}</td>
             <td>${escapeHtml(r.teamCode || "—")}</td>
             <td>${escapeHtml(formatTimestamp(r.exportedAt))}</td>
+            <td class="mvs-print-hide">${
+              r.id
+                ? `<button type="button" class="mvs-btn mvs-btn--ghost mvs-btn--small mvs-btn--danger mvs-admin-delete-btn" data-id="${escapeHtml(
+                    r.id
+                  )}" data-name="${escapeHtml(r.name)}">${escapeHtml(c.deleteCta)}</button>`
+                : ""
+            }</td>
           </tr>
         `;
       })
       .join("");
 
     return `
-      <p class="mvs-note mvs-print-hide">${escapeHtml(c.tableCountLabel(records.length))}</p>
+      <p class="mvs-note mvs-print-hide">${escapeHtml(
+        totalCount ? c.filterCountLabel(records.length, totalCount) : c.tableCountLabel(records.length)
+      )}</p>
       <div class="mvs-matrix-scroll">
         <table class="mvs-submissions-table">
           <thead>
             <tr>
               <th scope="col">${escapeHtml(c.colName)}</th>
+              <th scope="col">${escapeHtml(c.colType)}</th>
               <th scope="col">${escapeHtml(c.colResult)}</th>
               <th scope="col">${escapeHtml(c.colPeople)}</th>
               <th scope="col">${escapeHtml(c.colPerformance)}</th>
               <th scope="col">${escapeHtml(c.colProcess)}</th>
+              <th scope="col">${escapeHtml(c.colShift)}</th>
               <th scope="col">${escapeHtml(c.colTeamCode)}</th>
               <th scope="col">${escapeHtml(c.colSubmitted)}</th>
+              <th scope="col" class="mvs-print-hide">${escapeHtml(c.colDelete)}</th>
             </tr>
           </thead>
           <tbody>
@@ -203,6 +239,7 @@
           </tbody>
         </table>
       </div>
+      <p class="mvs-note mvs-print-hide">${escapeHtml(c.deleteUnavailableNote)}</p>
     `;
   }
 
@@ -234,9 +271,13 @@
     }
 
     const records = result.data.map((row) => ({
+      id: row.id,
       name: row.name,
+      recordType: row.record_type || "everyday",
       percentages: { people: row.people, performance: row.performance, process: row.process },
       category: row.category,
+      shiftScore: row.shift_score,
+      shiftBand: row.shift_band,
       teamCode: row.team_code,
       exportedAt: row.created_at,
     }));
@@ -245,6 +286,15 @@
 
   function renderAdmin(initialRecords, loadError) {
     let records = initialRecords.slice();
+    let teamCodeFilter = "";
+    let deleteError = false;
+    let focusFilterAfterPaint = false;
+
+    function visibleRecords() {
+      const f = teamCodeFilter.trim().toLowerCase();
+      if (!f) return records;
+      return records.filter((r) => (r.teamCode || "").trim().toLowerCase() === f);
+    }
 
     function paint(skipped) {
       const warningHtml =
@@ -256,6 +306,10 @@
       const loadErrorHtml = loadError
         ? `<div class="mvs-callout mvs-print-hide"><p>${escapeHtml(c.tableLoadError)}</p></div>`
         : "";
+      const deleteErrorHtml = deleteError
+        ? `<div class="mvs-callout mvs-print-hide"><p>${escapeHtml(c.deleteError)}</p></div>`
+        : "";
+      const shown = visibleRecords();
 
       root.innerHTML = `
         <div class="mvs-screen">
@@ -270,6 +324,7 @@
           <p class="mvs-lead mvs-print-hide">${escapeHtml(c.intro)}</p>
 
           ${loadErrorHtml}
+          ${deleteErrorHtml}
 
           <section class="mvs-section mvs-print-hide">
             <h2 class="mvs-section-title">${escapeHtml(c.loadHeading)}</h2>
@@ -286,13 +341,22 @@
 
           ${warningHtml}
 
+          <section class="mvs-section mvs-print-hide">
+            <h2 class="mvs-section-title">${escapeHtml(c.filterHeading)}</h2>
+            <label class="mvs-field-label" for="mvs-admin-team-filter">${escapeHtml(c.filterLabel)}</label>
+            <input type="text" id="mvs-admin-team-filter" class="mvs-text-input" placeholder="${escapeHtml(
+              c.filterPlaceholder
+            )}" value="${escapeHtml(teamCodeFilter)}" autocomplete="off" />
+            <p class="mvs-note">${escapeHtml(c.filterNote)}</p>
+          </section>
+
           <section class="mvs-section">
             <h2 class="mvs-section-title">${escapeHtml(c.tableHeading)}</h2>
-            ${renderTable(records)}
+            ${renderTable(shown, teamCodeFilter.trim() ? records.length : 0)}
           </section>
 
           ${
-            records.length
+            shown.length
               ? `
             <div class="mvs-btn-row mvs-print-hide">
               <button type="button" class="mvs-btn mvs-btn--ghost" id="mvs-admin-export-csv">${escapeHtml(
@@ -316,8 +380,43 @@
         renderGate();
       });
 
-      if (records.length) {
-        document.getElementById("mvs-admin-export-csv").addEventListener("click", () => downloadCsv(records));
+      const filterInput = document.getElementById("mvs-admin-team-filter");
+      filterInput.addEventListener("input", () => {
+        teamCodeFilter = filterInput.value;
+        focusFilterAfterPaint = true;
+        paint([]);
+      });
+      if (focusFilterAfterPaint) {
+        focusFilterAfterPaint = false;
+        filterInput.focus();
+        const caret = filterInput.value.length;
+        filterInput.setSelectionRange(caret, caret);
+      }
+
+      root.querySelectorAll(".mvs-admin-delete-btn").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          const id = btn.getAttribute("data-id");
+          const name = btn.getAttribute("data-name");
+          if (!window.confirm(c.deleteConfirm(name))) return;
+          const session = getSession();
+          const accessToken = session && session.access_token;
+          btn.disabled = true;
+          const ok =
+            accessToken && typeof SupabaseClient !== "undefined"
+              ? await SupabaseClient.remove("submissions", id, accessToken)
+              : false;
+          if (ok) {
+            records = records.filter((r) => r.id !== id);
+            deleteError = false;
+          } else {
+            deleteError = true;
+          }
+          paint([]);
+        });
+      });
+
+      if (shown.length) {
+        document.getElementById("mvs-admin-export-csv").addEventListener("click", () => downloadCsv(shown));
         document.getElementById("mvs-admin-export-pdf").addEventListener("click", () => window.print());
       }
     }
@@ -341,6 +440,7 @@
         if (looksValid) {
           records.push({
             name: data.name,
+            recordType: "everyday", // imported result-*.json files predate the Pressure Profile add-on
             percentages: data.percentages,
             category: data.category,
             teamCode: data.team_code || null,

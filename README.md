@@ -129,6 +129,20 @@ database. You only need to do this once:
    );
 
    alter table submissions add column if not exists team_code text;
+
+   -- Pressure Profile columns. A completed Pressure Profile is saved as
+   -- a second, self-contained row (record_type = 'pressure') rather than
+   -- updating the original Everyday row -- see README's "Data storage"
+   -- section below for why.
+   alter table submissions add column if not exists record_type text not null default 'everyday';
+   alter table submissions add column if not exists everyday_people numeric;
+   alter table submissions add column if not exists everyday_performance numeric;
+   alter table submissions add column if not exists everyday_process numeric;
+   alter table submissions add column if not exists shift_score numeric;
+   alter table submissions add column if not exists shift_band text;
+   alter table submissions add column if not exists largest_increase_dimension text;
+   alter table submissions add column if not exists largest_decrease_dimension text;
+
    alter table submissions enable row level security;
 
    drop policy if exists "Anyone can submit a result" on submissions;
@@ -140,6 +154,12 @@ database. You only need to do this once:
    drop policy if exists "Only signed-in admins can read results" on submissions;
    create policy "Only signed-in admins can read results"
      on submissions for select
+     to authenticated
+     using (true);
+
+   drop policy if exists "Only signed-in admins can delete results" on submissions;
+   create policy "Only signed-in admins can delete results"
+     on submissions for delete
      to authenticated
      using (true);
 
@@ -216,7 +236,7 @@ save didn't go through; the team overlay and blind-spot reveal fall back
 to their "load from files" option; the admin page shows a plain "couldn't
 reach the database" note instead of crashing.
 
-## The five flows
+## The six flows
 
 ### 1. Solo reflection
 
@@ -339,6 +359,18 @@ CSV" button (for pulling into Excel or Google Sheets) alongside the usual
 "Download as PDF." An "Import older result files" section further down
 lets you fold in any `result-*.json` files saved before the database
 existed, so historical submissions aren't lost.
+
+A **"Filter by team code"** field narrows the table down to one team's
+submissions — type a code and only matching rows show; clear it to see
+everyone again. This filter also scopes what "Download as CSV" and
+"Download as PDF" export, so you can pull a single team's results without
+the rest of the organisation's data mixed in.
+
+Each row loaded from the database (not from an imported file) has a
+**"Delete"** button, asking for confirmation before permanently removing
+that submission from the shared database — this can't be undone, so use it
+deliberately. Submissions folded in from imported files don't have one,
+since there's nothing in the database for them to delete.
 
 Signing in is a **real login** — checked by Supabase's own Auth service
 against an admin account you create yourself (see "Database setup"
@@ -642,11 +674,27 @@ record (no name or team code) into that browser's own `localStorage`, to
 support a future "how does this compare to everyone else" aggregate view
 — unrelated to the Supabase tables above, and never synced anywhere.
 
+If someone completes the optional **Pressure Profile** (see "Ways of
+Working under pressure" below), a *second* row is saved to the same
+`submissions` table, with `record_type` set to `"pressure"` rather than
+the default `"everyday"`. It's a separate row rather than an update to
+the original one — there's no reliable way for the page to look its own
+earlier row back up (the anon role can only insert, never read or
+update, by design — see "Team-code" security note above), so the
+pressure row is self-contained instead: alongside its own three
+percentages, it carries a copy of that person's Everyday percentages,
+the Motivational Shift score and band, and which dimension moved most in
+each direction. `admin.html`'s table shows a "Type" column so the two
+kinds of row are easy to tell apart, and a "Shift" column for pressure
+rows.
+
 Result files and guesses files still exist too, as a personal backup and a
 fallback for anyone not using a team code — deleting them from a shared
 folder after a workshop only removes that copy, not the database record
-(if one was made). To delete a database record, do it directly in the
-Supabase dashboard's Table Editor.
+(if one was made). `admin.html` has its own "Delete" button per row for
+removing a database record directly (see "Admin: all submissions"
+below); you can also do it directly in the Supabase dashboard's Table
+Editor if you'd rather.
 
 ## Admin editing
 
@@ -679,13 +727,54 @@ editing the tool's own wording.)
   unlike the old passphrase. It's still worth normal account hygiene
   (a real password, not shared beyond whoever needs admin access).
 
-## Future phase (not built here)
+### 6. Pressure Profile (optional add-on to solo reflection)
 
-The brief's second phase — a separate section on behaviour under
-conflict/pressure (accommodate / push / withdraw / analyse / seek
-compromise) — is intentionally not included in this build. It's a distinct
-instrument from the motivation reflection above and should ship as its own
-section later.
+An optional continuation offered right at the bottom of the Everyday
+result (`reflection.html`'s results screen) — "Curious how this shifts
+under pressure?" It's never required, and declining it changes nothing
+about the Everyday result already shown and saved.
+
+If someone starts it: a short transition screen explains the shift in
+framing ("Part 2 of 2: Responding under pressure"), followed by 18
+original situational questions. Unlike the Everyday questions, each one
+asks for a full ranking of all three responses — most like you, next
+most like you, least like you (tap in order; the last response completes
+itself once the other two are placed) — rather than picking just one, so
+someone's *relative* priorities under pressure can be measured rather
+than a single pick each time.
+
+The result — "How You Respond Under Pressure" — plots a second point
+("Pressure Profile") on the same triangle as the Everyday result
+("Everyday Profile"), joined by an arrow, plus:
+
+- a **Motivational Shift** score and band (Limited / Moderate /
+  Significant / Marked), measuring how far the two points sit apart —
+  not a measure of anger, aggression or conflict skill, just how much
+  someone's stated priorities move;
+- a generated headline and summary describing the actual *movement*
+  (e.g. "You move from People towards Performance under pressure"), not
+  a generic write-up of the pressure result on its own;
+- a full score table (Everyday / under pressure / change per dimension);
+- "What others may notice," "What remains valuable," "Risks to watch,"
+  "Practical self-management," "How colleagues can work with you," and
+  six reflection questions — all assembled from whichever dimension
+  increases and decreases most, so the write-up reflects this person's
+  specific shift;
+- its own "Download as PDF" export and explicit not-a-clinical-diagnostic
+  disclaimer.
+
+Completing it saves a second row to the `submissions` table (see "Data
+storage" above for exactly what that row contains) — this is disclosed
+alongside the Everyday save on the same privacy/consent screen everyone
+already sees before starting the questionnaire.
+
+This is Release 1 of the feature, scoped deliberately: no
+comparison-between-two-people report and no team-level "Motivational
+Shift" dashboard card yet (both were in the original brief, held back for
+a later round), and the profile-classification thresholds reuse the
+existing Everyday ones (`LED_GAP_THRESHOLD`/`BLEND_GAP_THRESHOLD` in
+`js/scoring.js`) rather than introducing a second set of tunable
+thresholds.
 
 ## IP notes
 
@@ -702,3 +791,14 @@ plan to publish this externally, keep the same discipline when editing
 content: write your own wording, don't reference "MVS" or "SDI" in any
 user-facing copy, and keep the visual designs here rather than recreating
 a seven-region triangle graphic.
+
+The Pressure Profile follows the same discipline: "Pressure Profile" and
+"Motivational Shift" are this product's own terms (not "Conflict
+Sequence"), the 18 questions and all report copy in `CONTENT.pressureQuestions`
+/ `CONTENT.pressureMovement` / `CONTENT.pressureResults` are original
+wording, the shift-score triangle is the same independently-designed
+graphic used everywhere else in this tool, and nothing here reproduces
+SDI's (or any other commercial assessment's) conflict-sequence codes,
+stage model or scoring. If you extend this feature, keep to that same
+boundary: original questions and wording only, and no claim of
+equivalence with any commercial assessment.

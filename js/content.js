@@ -139,9 +139,25 @@ const CONTENT = {
     colProcess: "Process",
     colTeamCode: "Team code",
     colSubmitted: "Submitted",
+    colType: "Type",
+    colShift: "Shift",
+    typeEveryday: "Everyday",
+    typePressure: "Pressure",
+    shiftNone: "—",
+    colDelete: "",
     exportCsvCta: "Download as CSV",
     exportCta: "Download as PDF",
     exportNote: "This opens your browser's print dialog — choose “Save as PDF” as the destination.",
+    filterHeading: "Filter by team code",
+    filterLabel: "Team code",
+    filterPlaceholder: "e.g. ATLAS7 — leave blank to show everyone",
+    filterNote: "Filtering also scopes what the CSV and PDF buttons below export — clear the filter to include everyone again.",
+    filterCountLabel: (shown, total) => `Showing ${shown} of ${total} submission${total === 1 ? "" : "s"}.`,
+    filterNoMatches: "No submissions match that team code.",
+    deleteCta: "Delete",
+    deleteConfirm: (name) => `Delete ${name}'s submission? This can't be undone.`,
+    deleteError: "Couldn't delete that submission just now — try again in a moment.",
+    deleteUnavailableNote: "Submissions imported from a file (rather than loaded from the database) can't be deleted here — there's nothing in the database for them to delete.",
   },
 
   team: {
@@ -643,6 +659,458 @@ const CONTENT = {
       ],
     },
   ],
+
+  /**
+   * ------------------------------------------------------------------
+   * PRESSURE PROFILE (optional add-on)
+   * ------------------------------------------------------------------
+   * An optional, separate continuation offered after the Everyday
+   * results screen. It measures how the same three motivations —
+   * People, Performance, Process — shift when disagreement, opposition
+   * or frustration continues despite someone's normal approach.
+   *
+   * This is original content, written for this product. It is not a
+   * reproduction of any commercial assessment's questions, scoring or
+   * report text — see README.md for the intellectual-property notes
+   * this feature was built against.
+   *
+   * Terminology used throughout: "Everyday Profile" (the existing
+   *30-question result) vs. "Pressure Profile" (this new result) vs.
+   * "Motivational Shift" (the difference between the two). Deliberately
+   * avoided: "explosiveness", "conflict style", clinical language.
+   * ------------------------------------------------------------------
+   */
+
+  // Banner shown on the Everyday results screen, offering the
+  // continuation. Entirely optional — declining it changes nothing
+  // about the Everyday result already shown.
+  pressureOffer: {
+    heading: "Curious how this shifts under pressure?",
+    body:
+      "Everything above reflects your everyday working style. There's an optional follow-on set of 18 questions that looks at how your priorities may change when disagreement or frustration continues — a separate \"Pressure Profile\", plotted alongside your everyday result. Takes about 5–7 minutes.",
+    cta: "Start the Pressure Profile",
+    skipNote: "Entirely optional — your Everyday result above is already complete and saved either way.",
+  },
+
+  // Transition screen shown before the pressure questions start
+  // (spec section 13.1), followed by the answering instructions
+  // (spec section 4.2).
+  pressureIntro: {
+    heading: "Now consider how you respond when difficulties continue",
+    paragraphs: [
+      "The next questions concern situations where disagreement, frustration or opposition remains unresolved — where your usual approach hasn't settled things.",
+      "Your priorities in these circumstances may be different from your everyday style. That's normal. Answer according to what you genuinely tend to do, not what you think the ideal response would be.",
+      "There are no good or bad profiles here. The purpose is to understand which priorities become most important to you when working relationships are under strain.",
+    ],
+    instructionsHeading: "How to answer",
+    instructions: [
+      "Each question describes a workplace situation and three possible responses.",
+      "Rank all three from most like you to least like you — every question needs a full ranking, with no ties.",
+      "You can change your ranking, or go back to an earlier question, at any point before you finish.",
+    ],
+    rankLabels: {
+      most: "Most like me",
+      next: "Next most like me",
+      least: "Least like me",
+    },
+    startCta: "Begin the Pressure Profile",
+    backToResultsLink: "← Back to your Everyday result",
+  },
+
+  pressureProgress: {
+    partLabel: "Part 2 of 2: Responding under pressure",
+    questionLabel: (current, total) => `Question ${current} of ${total}`,
+    rankPrompt: "Rank these three responses from most like you to least like you.",
+    tapToRankHint: "Tap in order: most like you first, least like you last.",
+    incompleteError: "Please rank all three responses before continuing.",
+    clearCta: "Clear my ranking",
+  },
+
+  /**
+   * ------------------------------------------------------------------
+   * PRESSURE QUESTIONS
+   * ------------------------------------------------------------------
+   * 18 questions, each with exactly three options (one per dimension).
+   * Unlike the Everyday questions above, respondents rank all three
+   * options (most/next/least like me = 2/1/0 points) rather than
+   * picking just one — see js/pressure.js for the ranking UI and
+   * js/scoring.js's tallyPressureAnswers() for how that's scored.
+   * Options are shown in a shuffled order at run time, same as above.
+   * ------------------------------------------------------------------
+   */
+  pressureQuestions: [
+    {
+      id: "p01",
+      prompt: "A colleague continues to challenge a decision you believe needs to be made. What are you most likely to focus on?",
+      options: [
+        { text: "Reaching a clear decision and moving the work forward.", dimension: "performance" },
+        { text: "Understanding their concerns and finding an outcome they can support.", dimension: "people" },
+        { text: "Testing the decision against the evidence and agreed criteria.", dimension: "process" },
+      ],
+    },
+    {
+      id: "p02",
+      prompt: "A discussion has gone around in circles and no progress is being made. What do you tend to do?",
+      options: [
+        { text: "Bring the discussion to a conclusion and assign the next actions.", dimension: "performance" },
+        { text: "Check what remains unresolved for the people involved.", dimension: "people" },
+        { text: "Restate the issue and work through it in a more structured way.", dimension: "process" },
+      ],
+    },
+    {
+      id: "p03",
+      prompt: "Someone has not delivered something important that they committed to. What matters most to you initially?",
+      options: [
+        { text: "Recovering the position and ensuring the required result is delivered.", dimension: "performance" },
+        { text: "Understanding what happened before deciding how to respond.", dimension: "people" },
+        { text: "Identifying where the plan, controls or responsibilities broke down.", dimension: "process" },
+      ],
+    },
+    {
+      id: "p04",
+      prompt: "Your recommendation is rejected without an explanation you consider adequate. What are you most likely to do?",
+      options: [
+        { text: "Challenge the decision directly and argue for the better outcome.", dimension: "performance" },
+        { text: "Speak with those involved to understand their concerns and rebuild support.", dimension: "people" },
+        { text: "Request the rationale, evidence and decision criteria.", dimension: "process" },
+      ],
+    },
+    {
+      id: "p05",
+      prompt: "Two colleagues are in a disagreement that is affecting the wider team. Where does your attention go?",
+      options: [
+        { text: "Stopping the disagreement from disrupting delivery.", dimension: "performance" },
+        { text: "Repairing the relationship and ensuring both people feel heard.", dimension: "people" },
+        { text: "Establishing the facts and agreeing a fair way to resolve the issue.", dimension: "process" },
+      ],
+    },
+    {
+      id: "p06",
+      prompt: "A project is falling behind and the team disagrees about what to do next. What do you prioritise?",
+      options: [
+        { text: "Selecting a course of action quickly and recovering the timetable.", dimension: "performance" },
+        { text: "Creating enough agreement that the team can move forward together.", dimension: "people" },
+        { text: "Reviewing the causes and producing a realistic revised plan.", dimension: "process" },
+      ],
+    },
+    {
+      id: "p07",
+      prompt: "Someone criticises your work in a meeting. What response is most natural to you?",
+      options: [
+        { text: "Address the criticism directly and defend the outcome where necessary.", dimension: "performance" },
+        { text: "Consider what has led them to raise it in that way and seek a constructive conversation.", dimension: "people" },
+        { text: "Ask for specific examples and examine whether the criticism is supported.", dimension: "process" },
+      ],
+    },
+    {
+      id: "p08",
+      prompt: "A colleague repeatedly avoids giving you a clear answer. What do you tend to do?",
+      options: [
+        { text: "Ask for a direct answer and set a deadline for it.", dimension: "performance" },
+        { text: "Explore whether something is preventing them from speaking openly.", dimension: "people" },
+        { text: "Clarify exactly what information or decision is required from them.", dimension: "process" },
+      ],
+    },
+    {
+      id: "p09",
+      prompt: "A decision has caused a negative reaction across the team. What do you focus on?",
+      options: [
+        { text: "Holding the direction where it remains necessary and keeping delivery on track.", dimension: "performance" },
+        { text: "Understanding the reaction and addressing its impact on trust and morale.", dimension: "people" },
+        { text: "Reviewing whether the decision and its implementation were properly considered.", dimension: "process" },
+      ],
+    },
+    {
+      id: "p10",
+      prompt: "You believe someone is making an issue unnecessarily complicated. What are you most likely to do?",
+      options: [
+        { text: "Reduce it to the key decision and press for action.", dimension: "performance" },
+        { text: "Ask what concerns are making the issue difficult for them.", dimension: "people" },
+        { text: "Separate the facts, assumptions and unresolved questions.", dimension: "process" },
+      ],
+    },
+    {
+      id: "p11",
+      prompt: "A meeting becomes tense and participants begin talking over one another. What do you naturally try to restore?",
+      options: [
+        { text: "Direction and control.", dimension: "performance" },
+        { text: "Respectful dialogue and participation.", dimension: "people" },
+        { text: "Order, clarity and a rational discussion.", dimension: "process" },
+      ],
+    },
+    {
+      id: "p12",
+      prompt: "You are asked to support a decision you have significant reservations about. What do you tend to do?",
+      options: [
+        { text: "State your position clearly and push for a different decision.", dimension: "performance" },
+        { text: "Discuss your concerns privately and try to preserve collective support.", dimension: "people" },
+        { text: "Document the risks and ask for the basis of the decision to be reviewed.", dimension: "process" },
+      ],
+    },
+    {
+      id: "p13",
+      prompt: "A colleague reacts defensively when you raise a problem. What becomes most important?",
+      options: [
+        { text: "Ensuring the problem is still confronted and resolved.", dimension: "performance" },
+        { text: "Reducing defensiveness so that a productive conversation remains possible.", dimension: "people" },
+        { text: "Keeping the discussion focused on specific facts and examples.", dimension: "process" },
+      ],
+    },
+    {
+      id: "p14",
+      prompt: "An important issue remains unresolved after several conversations. What do you become more inclined to do?",
+      options: [
+        { text: "Escalate it or make the decision yourself where possible.", dimension: "performance" },
+        { text: "Involve someone who can help the parties find common ground.", dimension: "people" },
+        { text: "Pause further debate until the necessary information has been assembled.", dimension: "process" },
+      ],
+    },
+    {
+      id: "p15",
+      prompt: "A colleague continues to work in a way you consider ineffective. How are you most likely to respond?",
+      options: [
+        { text: "Set clearer expectations and require a change in performance.", dimension: "performance" },
+        { text: "Speak with them to understand their perspective and offer support.", dimension: "people" },
+        { text: "Show where the approach is failing and agree a more reliable method.", dimension: "process" },
+      ],
+    },
+    {
+      id: "p16",
+      prompt: "You are under pressure to make a decision before you feel the issue has been properly resolved. What do you tend to protect most strongly?",
+      options: [
+        { text: "The need to maintain momentum and avoid losing the opportunity.", dimension: "performance" },
+        { text: "The need to retain trust and avoid leaving key people behind.", dimension: "people" },
+        { text: "The need to make a sound decision with adequate information.", dimension: "process" },
+      ],
+    },
+    {
+      id: "p17",
+      prompt: "Someone questions your authority or responsibility for an area of work. What response is most natural?",
+      options: [
+        { text: "Reassert your responsibility and establish who is making the decision.", dimension: "performance" },
+        { text: "Seek to understand why the relationship or responsibilities have become unclear.", dimension: "people" },
+        { text: "Refer back to the agreed roles, governance and decision rights.", dimension: "process" },
+      ],
+    },
+    {
+      id: "p18",
+      prompt: "When a difficult working relationship has continued for some time, what do you become most likely to do?",
+      options: [
+        { text: "Confront the central issue and force a resolution.", dimension: "performance" },
+        { text: "Make another attempt to repair the relationship and restore cooperation.", dimension: "people" },
+        { text: "Reduce contact, formalise communication and rely more heavily on evidence and procedure.", dimension: "process" },
+      ],
+    },
+  ],
+
+  /**
+   * ------------------------------------------------------------------
+   * PRESSURE PROFILE — REPORT COPY
+   * ------------------------------------------------------------------
+   * Copy used to assemble the "How You Respond Under Pressure" report.
+   * Rather than one static write-up per dimension, the report is built
+   * from whichever dimension increases most and whichever decreases
+   * most (see js/pressure.js), so the narrative actually reflects the
+   * *movement*, not just the pressure result on its own — as specified.
+   * ------------------------------------------------------------------
+   */
+  pressureResults: {
+    headerEyebrow: (name) => (name ? `${name}'s pressure profile` : "Your pressure profile"),
+    title: "How You Respond Under Pressure",
+    subtitle: "How your priorities may change when disagreement or frustration continues.",
+    everydayLabel: "Everyday profile",
+    pressureLabel: "Pressure profile",
+    shiftLabel: "Motivational Shift",
+    chartTitle: "Everyday vs. under pressure",
+    chartLegendEveryday: "Everyday profile",
+    chartLegendPressure: "Pressure profile",
+    scoreTableHeading: "Your scores",
+    colMotivation: "Motivation",
+    colEveryday: "Everyday",
+    colPressure: "Under pressure",
+    colChange: "Change",
+    changeNoChange: "No material change",
+    shiftBandLabels: {
+      limited: "Limited shift",
+      moderate: "Moderate shift",
+      significant: "Significant shift",
+      marked: "Marked shift",
+    },
+    shiftBandDescriptions: {
+      limited: "Your priorities remain relatively consistent, whether things are going smoothly or not.",
+      moderate: "There's some noticeable adaptation in what you focus on when disagreement continues.",
+      significant: "Colleagues are likely to notice a material change in how you come across.",
+      marked: "Your pressure response may feel substantially different from your everyday style.",
+    },
+    shiftIntensityWord: {
+      limited: "a little",
+      moderate: "somewhat",
+      significant: "noticeably",
+      marked: "substantially",
+    },
+    // Short adjectives used in the summary paragraph's closing sentence,
+    // describing how someone comes across when this dimension is the
+    // one that increases most under pressure.
+    increaseAdjectives: {
+      performance: ["direct", "decisive", "forceful"],
+      people: ["accommodating", "supportive", "relationship-focused"],
+      process: ["analytical", "formal", "methodical"],
+    },
+    headline: {
+      movement: (fromLabel, toLabel) => `You move from ${fromLabel} towards ${toLabel} under pressure.`,
+      sameFocusIntensifies: (label) =>
+        `You remain primarily ${label}-led, but become more strongly ${label}-focused under pressure.`,
+      balanced: (label) => `Your priorities remain broadly balanced, with a modest increase in ${label} focus.`,
+      towardsCombination: (fromLabel, aLabel, bLabel) =>
+        `You move away from ${fromLabel} towards a combination of ${aLabel} and ${bLabel}.`,
+    },
+    // Opening/closing clauses for the summary paragraph, keyed by
+    // dimension — describes what someone is motivated by day to day
+    // (everyday) vs. under pressure.
+    everydayFocusPhrase: {
+      people: "maintaining trust, involving others and creating a supportive environment",
+      performance: "driving progress, taking ownership and pushing for visible results",
+      process: "gathering evidence, thinking things through carefully and applying a consistent approach",
+    },
+    pressureFocusPhrase: {
+      performance: "achieving a resolution, making a decision and restoring progress",
+      people: "repairing relationships, seeking reassurance and preserving cooperation",
+      process: "establishing the facts, slowing down and relying on evidence or agreed procedure",
+    },
+    sectionHeadings: {
+      whatOthersMayNotice: "What others may notice",
+      whatRemainsValuable: "What remains valuable",
+      risksToWatch: "Risks to watch",
+      selfManagement: "Practical self-management",
+      howColleaguesCanWork: "How colleagues can work with you",
+      reflection: "Questions for reflection",
+    },
+    selfManagementClosing:
+      "Once the issue is resolved, check back in on how your communication came across — it's an easy step to skip.",
+    shiftAwarenessRisk: (bandLabel) =>
+      `Because this is a ${bandLabel.toLowerCase()}, colleagues who don't expect it may misread the change if you don't name it yourself.`,
+    reflectionQuestions: [
+      "What are the earliest signs that your priorities are changing?",
+      "What does your communication become more like?",
+      "What might colleagues misinterpret?",
+      "What value does your pressure response bring?",
+      "What part of your everyday style should you deliberately retain?",
+      "What helps you return to a constructive working relationship?",
+    ],
+    disclaimer:
+      "This profile is intended to support reflection and workplace conversations. It does not measure mental health, emotional stability or a person's ability to manage conflict, and it isn't a validated psychometric or clinical assessment.",
+    restartCta: "Start again",
+    backToEverydayCta: "← Back to your Everyday result",
+    exportCta: "Download as PDF",
+    exportNote: "This opens your browser's print dialog — choose “Save as PDF” as the destination.",
+    cloudSaveOkNote: (teamCode) =>
+      teamCode
+        ? `This pressure result has also been saved automatically under team code "${teamCode}".`
+        : "This pressure result has been saved to this tool's shared database.",
+    cloudSaveFailNote:
+      "Couldn't reach the shared database just now, so this pressure result hasn't saved automatically. Your Everyday result from earlier is unaffected.",
+  },
+
+  /**
+   * Movement-specific content (spec sections 11.1–11.6), keyed by the
+   * dimension that moves. `increase*` content is used for whichever
+   * dimension increases most under pressure (this drives most of the
+   * report); `decreaseNotice` is a single sentence used for whichever
+   * dimension decreases most, folded into "What others may notice"
+   * alongside the increase-dimension bullets.
+   */
+  pressureMovement: {
+    performance: {
+      increaseNotice: [
+        "You may become more direct and quicker to challenge things you disagree with.",
+        "You may move more quickly towards a decision, rather than continuing to discuss.",
+        "You may focus more on ownership, delivery and who is accountable for what.",
+        "You may show less patience for repeated or circular discussion.",
+      ],
+      increaseValue: [
+        "You help restore momentum when things have stalled.",
+        "You're willing to confront problems that have been left unresolved.",
+        "You establish clear direction when a team needs it most.",
+        "You help protect delivery and the required result.",
+      ],
+      increaseRisk: [
+        "You may come across as abrupt to people expecting your usual pace.",
+        "You may close down discussion before others feel ready.",
+        "You may overlook emotional or procedural concerns in the push for an outcome.",
+        "Your directness can be experienced as more forceful than you intend.",
+      ],
+      increaseSelfManagement: [
+        "Say plainly when you're becoming concerned about progress, rather than letting it build silently.",
+        "Separate the decision that needs making from your reaction to the delay.",
+        "Keep acknowledging people-related concerns, even once they're no longer your main focus.",
+        "Give people a moment to respond before moving straight to the next action.",
+      ],
+      colleaguesGuidance:
+        "When you're under pressure, colleagues should be clear, concise and ready to address the issue directly — bringing options and recommendations rather than reopening broad discussion. It also helps if they flag any relationship implications you might be at risk of overlooking.",
+      decreaseNotice:
+        "You may step back from pushing a preferred outcome and become less willing to force an immediate decision.",
+    },
+    people: {
+      increaseNotice: [
+        "You may become more concerned with preserving cooperation than with resolving the issue quickly.",
+        "You may seek more reassurance and check more often how others are feeling.",
+        "You may invest noticeably more effort in repairing the relationship.",
+        "You may try to reduce tension before addressing the substance of the issue.",
+      ],
+      increaseValue: [
+        "You help lower hostility and keep people talking to each other.",
+        "You protect trust at a point where it could easily be damaged.",
+        "You draw out concerns other people haven't said out loud.",
+        "You keep the door open for a constructive resolution.",
+      ],
+      increaseRisk: [
+        "You may avoid a confrontation that genuinely needs to happen.",
+        "You may accommodate too much, at the expense of a firm decision.",
+        "You may delay a necessary call while trying to keep everyone comfortable.",
+        "You may take the disagreement more personally than the situation warrants.",
+      ],
+      increaseSelfManagement: [
+        "Notice when reassurance-seeking is delaying a decision that needs to be made.",
+        "Separate \"keeping the peace\" from actually resolving the issue.",
+        "Set yourself a point at which you'll raise the difficult point directly, rather than waiting for the right moment.",
+        "Ask a trusted colleague to tell you if they think you're avoiding something.",
+      ],
+      colleaguesGuidance:
+        "When you're under pressure, colleagues should expect you to focus more on how the situation is affecting people and relationships. It helps if they're patient, acknowledge the relationship impact explicitly, and gently keep the conversation moving towards a decision rather than assuming you'll push for one yourself.",
+      decreaseNotice:
+        "You may become less diplomatic and spend less time checking how a decision will land with the people affected by it.",
+    },
+    process: {
+      increaseNotice: [
+        "You may become noticeably more analytical and want to see the evidence before responding.",
+        "You may slow the decision down until the facts are clearer.",
+        "You may rely more heavily on agreed rules, procedure or precedent.",
+        "You may formalise communication — more in writing, less in passing conversation.",
+      ],
+      increaseValue: [
+        "You help prevent an impulsive or poorly-evidenced decision.",
+        "You bring objectivity when a situation is otherwise running on emotion.",
+        "You identify gaps or inconsistencies other people have missed.",
+        "You create a resolution that can be defended and explained later.",
+      ],
+      increaseRisk: [
+        "You may withdraw from the direct, human side of the conversation.",
+        "You may come across as cold or detached at the point people want reassurance.",
+        "You may over-analyse a situation that needs a faster response.",
+        "You may use process as a way to avoid a difficult conversation rather than resolve it.",
+      ],
+      increaseSelfManagement: [
+        "Say out loud that you're taking time to think it through, so it doesn't read as avoidance.",
+        "Set yourself a deadline for analysis, rather than letting it extend indefinitely.",
+        "Pair your evidence with an explicit acknowledgement of how people are feeling.",
+        "Check whether the level of analysis actually matches how serious the issue is.",
+      ],
+      colleaguesGuidance:
+        "When you're under pressure, colleagues should bring clear evidence and a specific ask rather than a vague or emotional appeal. It helps if they're patient with the time you need to think it through, while also gently checking in so analysis doesn't become a way of avoiding the conversation altogether.",
+      decreaseNotice:
+        "You may rely less on detailed analysis and become more willing to act before you have complete information.",
+    },
+  },
 
   /**
    * ------------------------------------------------------------------

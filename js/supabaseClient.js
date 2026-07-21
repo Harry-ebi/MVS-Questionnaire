@@ -115,7 +115,28 @@ const SupabaseClient = (function () {
     }
   }
 
-  return { insert, rpc, signIn, selectAll };
+  /**
+   * Delete one row from `table` by its `id`, using a signed-in admin's
+   * access token. Only works because the table's Row Level Security
+   * policy grants `delete` to `authenticated` (see README.md's
+   * "Database setup" section) — without that policy this simply fails,
+   * the same fail-soft way as every other method here. Returns
+   * true/false, never throws.
+   */
+  async function remove(table, id, accessToken) {
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${encodeURIComponent(id)}`, {
+        method: "DELETE",
+        headers: { ...restHeaders(accessToken), Prefer: "return=minimal" },
+      });
+      return res.ok;
+    } catch (err) {
+      console.warn(`Supabase delete from "${table}" failed:`, err);
+      return false;
+    }
+  }
+
+  return { insert, rpc, signIn, selectAll, remove };
 })();
 
 if (typeof module !== "undefined" && module.exports) {

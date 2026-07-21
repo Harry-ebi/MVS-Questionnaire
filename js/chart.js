@@ -328,6 +328,156 @@ function renderResultsChart(container, percentages, dimensionNames) {
 }
 
 // ------------------------------------------------------------------
+// Motivational Shift chart — Everyday point, Pressure point, and an
+// arrow between them (spec: "How You Respond Under Pressure" report).
+// Reuses the exact same pixel-space triangle/vertices as the single-
+// person results chart above, so it looks visually consistent with it
+// rather than introducing a second, incompatible coordinate system.
+// ------------------------------------------------------------------
+
+function drawArrowBetween(svg, from, to) {
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const len = Math.sqrt(dx * dx + dy * dy) || 1;
+  const ux = dx / len;
+  const uy = dy / len;
+
+  // Stop the line short of the pressure marker so the arrowhead doesn't
+  // disappear underneath it.
+  const shrink = 13;
+  const endX = to.x - ux * shrink;
+  const endY = to.y - uy * shrink;
+
+  svg.appendChild(
+    svgEl("line", { x1: from.x, y1: from.y, x2: endX, y2: endY, class: "mvs-shift-arrow-line" })
+  );
+
+  const headLen = 11;
+  const headWidth = 7;
+  const backX = endX - ux * headLen;
+  const backY = endY - uy * headLen;
+  const perpX = -uy;
+  const perpY = ux;
+  const tip = { x: endX, y: endY };
+  const left = { x: backX + perpX * headWidth, y: backY + perpY * headWidth };
+  const right = { x: backX - perpX * headWidth, y: backY - perpY * headWidth };
+  svg.appendChild(
+    svgEl("polygon", {
+      points: `${tip.x},${tip.y} ${left.x},${left.y} ${right.x},${right.y}`,
+      class: "mvs-shift-arrowhead",
+    })
+  );
+}
+
+function drawDiamondMarker(svg, point, r, className) {
+  const pts = [
+    { x: point.x, y: point.y - r },
+    { x: point.x + r, y: point.y },
+    { x: point.x, y: point.y + r },
+    { x: point.x - r, y: point.y },
+  ];
+  svg.appendChild(
+    svgEl("polygon", { points: pts.map((p) => `${p.x},${p.y}`).join(" "), class: className })
+  );
+}
+
+/**
+ * everydayPercentages / pressurePercentages: {people, performance, process}
+ * legendLabels: { everyday: string, pressure: string }
+ */
+function renderShiftChart(container, everydayPercentages, pressurePercentages, dimensionNames, legendLabels) {
+  container.innerHTML = "";
+  const markerInk = "#14101a";
+
+  const everydayPoint = barycentricPoint(everydayPercentages);
+  const pressurePoint = barycentricPoint(pressurePercentages);
+
+  const svg = svgEl("svg", {
+    viewBox: "0 0 300 260",
+    class: "mvs-triangle mvs-triangle--shift",
+    role: "img",
+    "aria-label": `Triangle showing your everyday profile (People ${everydayPercentages.people}%, Performance ${everydayPercentages.performance}%, Process ${everydayPercentages.process}%) and your pressure profile (People ${pressurePercentages.people}%, Performance ${pressurePercentages.performance}%, Process ${pressurePercentages.process}%), with an arrow from one to the other`,
+  });
+
+  drawTriangleSkeleton(svg);
+  drawVertexLabels(svg, dimensionNames, null);
+
+  drawArrowBetween(svg, everydayPoint, pressurePoint);
+
+  // Everyday: solid circular marker (same convention as the single-
+  // person results chart).
+  svg.appendChild(
+    svgEl("circle", { cx: everydayPoint.x, cy: everydayPoint.y, r: 9, class: "mvs-shift-marker-ring" })
+  );
+  svg.appendChild(
+    svgEl("circle", {
+      cx: everydayPoint.x,
+      cy: everydayPoint.y,
+      r: 6,
+      fill: markerInk,
+      class: "mvs-shift-marker mvs-shift-marker--everyday",
+    })
+  );
+
+  // Pressure: outlined diamond marker — distinguishable from the
+  // Everyday marker by shape, not just colour (accessible to colour-
+  // vision-deficient readers and to print/greyscale).
+  drawDiamondMarker(svg, pressurePoint, 10, "mvs-shift-marker-ring mvs-shift-marker-ring--pressure");
+  drawDiamondMarker(svg, pressurePoint, 4.5, "mvs-shift-marker mvs-shift-marker--pressure");
+
+  const triangleWrap = document.createElement("div");
+  triangleWrap.className = "mvs-triangle-wrap";
+  triangleWrap.appendChild(svg);
+  container.appendChild(triangleWrap);
+
+  // Legend — shape-coded, not colour-coded, so it reads correctly in
+  // greyscale print and for colour-vision-deficient readers.
+  const legend = document.createElement("div");
+  legend.className = "mvs-legend mvs-shift-legend";
+  legend.innerHTML = `
+    <div class="mvs-legend-item">
+      <span class="mvs-shift-legend-swatch mvs-shift-legend-swatch--everyday" aria-hidden="true"></span>
+      <span>${escapeHtmlLocal(legendLabels.everyday)}</span>
+    </div>
+    <div class="mvs-legend-item">
+      <span class="mvs-shift-legend-swatch mvs-shift-legend-swatch--pressure" aria-hidden="true"></span>
+      <span>${escapeHtmlLocal(legendLabels.pressure)}</span>
+    </div>
+  `;
+  container.appendChild(legend);
+
+  // Accessible text-based fallback: exact splits for both profiles,
+  // side by side (also what ends up on narrow screens / in print).
+  const table = document.createElement("table");
+  table.className = "mvs-overlay-table";
+  table.innerHTML = `
+    <thead>
+      <tr>
+        <th>${escapeHtmlLocal(legendLabels.tableProfileHeading || "Profile")}</th>
+        <th>${dimensionNames.people}</th>
+        <th>${dimensionNames.performance}</th>
+        <th>${dimensionNames.process}</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>${escapeHtmlLocal(legendLabels.everyday)}</td>
+        <td>${everydayPercentages.people}%</td>
+        <td>${everydayPercentages.performance}%</td>
+        <td>${everydayPercentages.process}%</td>
+      </tr>
+      <tr>
+        <td>${escapeHtmlLocal(legendLabels.pressure)}</td>
+        <td>${pressurePercentages.people}%</td>
+        <td>${pressurePercentages.performance}%</td>
+        <td>${pressurePercentages.process}%</td>
+      </tr>
+    </tbody>
+  `;
+  container.appendChild(table);
+}
+
+// ------------------------------------------------------------------
 // Overlay chart — many people on one triangle
 // ------------------------------------------------------------------
 
@@ -672,6 +822,7 @@ if (typeof module !== "undefined" && module.exports) {
     renderResultsChart,
     renderOverlayChart,
     renderPerceptionChart,
+    renderShiftChart,
     createInteractiveTriangle,
     CHART_COLORS,
     pointToPercentages,

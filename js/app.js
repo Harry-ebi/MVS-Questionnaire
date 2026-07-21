@@ -298,6 +298,8 @@
 
         <p class="mvs-footer-note">${escapeHtml(rc.footerNote)}</p>
 
+        ${PressureFlow.renderOfferBannerHtml()}
+
         <section class="mvs-section" id="mvs-save-file-section">
           <h2 class="mvs-section-title">${escapeHtml(rc.saveFileHeading)}</h2>
           <p class="mvs-note" id="mvs-cloud-save-note" hidden></p>
@@ -329,6 +331,11 @@
     const chartContainer = document.getElementById("mvs-chart-container");
     renderResultsChart(chartContainer, scoreResult.percentages, dimNames);
     updateCloudSaveNote(); // in case the cloud save already resolved before this render
+
+    PressureFlow.wireOfferBanner(() => {
+      PressureFlow.start(scoreResult, state.respondentName, state.teamCode);
+      goTo("pressureIntro");
+    });
 
     document.getElementById("mvs-restart").addEventListener("click", () => {
       resetRun();
@@ -532,6 +539,28 @@
         break;
       case "results":
         renderResults();
+        break;
+      case "pressureIntro":
+        PressureFlow.renderIntro(root, {
+          onBegin: () => goTo("pressureQuestion"),
+          onBack: () => goTo("results"),
+        });
+        break;
+      case "pressureQuestion":
+        PressureFlow.renderQuestion(root, {
+          onComplete: () => goTo("pressureResults"),
+          onBackToIntro: () => goTo("pressureIntro"),
+        });
+        break;
+      case "pressureResults":
+        PressureFlow.renderResults(root, {
+          respondentName: state.respondentName,
+          teamCode: state.teamCode,
+          onRestart: () => {
+            resetRun();
+            goTo("landing");
+          },
+        });
         break;
       default:
         renderLanding();
