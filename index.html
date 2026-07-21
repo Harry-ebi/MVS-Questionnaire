@@ -15,6 +15,13 @@
 <body>
   <div class="mvs-hero-band">
     <div class="mvs-hero-shape" aria-hidden="true"></div>
+    <a href="#" id="home-admin-link" class="mvs-hero-admin-link">
+      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="5" y="11" width="14" height="9" rx="2" />
+        <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+      </svg>
+      <span id="home-admin-link-label"></span>
+    </a>
     <div class="mvs-hero-content">
       <svg class="mvs-hero-logo" viewBox="0 0 210 130" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="ebi logo">
         <path d="M10,118 L10,62 A14,14 0 0 1 38,62 L38,118 Z" fill="#ffffff" />
@@ -75,13 +82,30 @@
       document.getElementById("home-hero-title").textContent = c.title;
       document.getElementById("home-hero-lead").textContent = c.intro;
 
+      const adminLink = document.getElementById("home-admin-link");
+      adminLink.href = c.adminLinkHref;
+      adminLink.title = c.adminLinkLabel;
+      adminLink.setAttribute("aria-label", c.adminLinkLabel);
+      document.getElementById("home-admin-link-label").textContent = c.adminLinkShort;
+
+      const [featuredCard, ...restCards] = c.cards;
+
       const root = document.getElementById("home-app");
       root.innerHTML = `
         <div class="mvs-screen">
           <section class="mvs-section" style="border-top:none;padding-top:4px;">
             <h2 class="mvs-section-title">${c.cardsHeading}</h2>
+
+            <a class="mvs-tool-tile mvs-tool-tile--featured mvs-tool-tile--${featuredCard.accent}" href="${featuredCard.href}">
+              <span class="mvs-tool-icon">${ICONS[featuredCard.icon] || ""}</span>
+              <span class="mvs-tool-featured-text">
+                <h2>${featuredCard.title}</h2>
+                <p>${featuredCard.body}</p>
+              </span>
+            </a>
+
             <div class="mvs-tool-grid">
-              ${c.cards
+              ${restCards
                 .map(
                   (card) => `
                 <a class="mvs-tool-tile mvs-tool-tile--${card.accent}" href="${card.href}">
@@ -93,6 +117,15 @@
                 )
                 .join("")}
             </div>
+
+            <a class="mvs-guide-banner" href="${c.guideCard.href}">
+              <span class="mvs-guide-banner-icon">${ICONS[c.guideCard.icon] || ""}</span>
+              <span class="mvs-guide-banner-text">
+                <span class="mvs-guide-banner-tag">${c.guideCard.tag}</span>
+                <h2>${c.guideCard.title}</h2>
+                <p>${c.guideCard.body}</p>
+              </span>
+            </a>
           </section>
 
           <section class="mvs-section mvs-about-block">
@@ -109,10 +142,6 @@
             <h2 class="mvs-section-title">${c.notHeading}</h2>
             <p class="mvs-note">${c.notBody}</p>
           </section>
-
-          <p class="mvs-note" style="text-align:center;margin-top:8px;">
-            <a href="${c.adminLinkHref}">${c.adminLinkLabel}</a>
-          </p>
         </div>
       `;
     })();

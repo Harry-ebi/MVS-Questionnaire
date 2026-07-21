@@ -19,6 +19,7 @@
     consentGiven: false,
     respondentName: "",
     lastScoreResult: null,
+    autoSavedThisRun: false,
   };
 
   function shuffle(array) {
@@ -43,6 +44,7 @@
     state.consentGiven = false;
     state.respondentName = "";
     state.lastScoreResult = null;
+    state.autoSavedThisRun = false;
     buildQuestionOrder();
   }
 
@@ -216,6 +218,18 @@
     state.lastScoreResult = scoreResult;
     submitAnonymisedResult(scoreResult);
 
+    // Auto-save a result file the moment results are reached, rather than
+    // requiring a separate click — this still only writes to the
+    // person's own downloads, nothing is sent anywhere by this tool, and
+    // it removes the "I forgot to click save" failure mode. Guarded by
+    // autoSavedThisRun so a re-render of this same screen (there isn't
+    // currently a code path that causes one, but this is cheap insurance)
+    // can't trigger a second automatic download.
+    if (!state.autoSavedThisRun) {
+      downloadResultFile(state.respondentName, scoreResult);
+      state.autoSavedThisRun = true;
+    }
+
     const cat = CONTENT.categoryContent[scoreResult.category];
     const rc = CONTENT.results;
     const dimNames = rc.dimensionNames;
@@ -262,6 +276,7 @@
 
         <section class="mvs-section" id="mvs-save-file-section">
           <h2 class="mvs-section-title">${escapeHtml(rc.saveFileHeading)}</h2>
+          <p class="mvs-note">${escapeHtml(rc.saveFileAutoNote(resultFileName(state.respondentName)))}</p>
           <p class="mvs-note">${escapeHtml(rc.saveFileNote)}</p>
           <div class="mvs-btn-row">
             <input type="text" id="mvs-save-file-name" class="mvs-text-input" placeholder="${escapeHtml(

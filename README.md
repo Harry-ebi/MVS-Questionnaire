@@ -15,16 +15,22 @@ This is a **fully static site** — plain HTML, CSS and JavaScript, with no
 backend, no database, no build step, and nothing to install. Every page can
 be opened straight from a folder, or served by any plain web host.
 
-The team features (overlay and blind-spot exercise) need a way for several
-people's separate results to end up in one place. Instead of a shared
-server, this app uses a much simpler mechanism: each person's results page
-has a **"Save result file"** button that downloads a small `.json` file
-(e.g. `result-alice.json`). People drop these files into any shared folder
-they already use — OneDrive, Dropbox, Google Drive, a network drive, or
-just email — and then load them all at once on the team overlay or
-blind-spot reveal page. Nothing is ever uploaded anywhere; every file is
-read directly inside the browser using the File/FileReader API, on
-whichever computer opens it.
+The team features (overlay and blind-spot exercise, plus the admin
+submissions view) need a way for several people's separate results to end
+up in one place. Instead of a shared server, this app uses a much simpler
+mechanism: the moment someone reaches their results screen, a small
+`.json` file (e.g. `result-alice.json`) **downloads to their device
+automatically** — no button click needed for that part, which removes the
+"I forgot to click save" gap. A **"Save again"** button stays on the page
+for re-saving under a different name, or in case a browser blocked the
+automatic download. Either way, downloading the file is only half the
+job: someone still has to actually hand it over — email it, or drop it
+into a shared folder (OneDrive, Dropbox, Google Drive, a network drive,
+whatever you already use) — before it can be loaded all at once on the
+team overlay, blind-spot reveal, or admin page. There is no step that
+sends it anywhere automatically beyond the person's own downloads; every
+file is read directly inside the browser using the File/FileReader API,
+on whichever computer opens it.
 
 The solo reflection works exactly the same on its own — nothing about a
 person's answers leaves their browser unless they choose to save and share
@@ -60,9 +66,10 @@ Pages:
 - `team.html` — load everyone's result files and see the team overlay.
 - `guess.html` — the blind-spot (perception) exercise: guessing, then reveal.
 - `admin.html` — passphrase-gated view of every loaded result file as a
-  plain table, with CSV and PDF export. Linked only as a small text link
-  at the bottom of the home page, not one of the main tiles. See "Admin:
-  all submissions" below for how it works and its real security limits.
+  plain table, with CSV and PDF export. Linked from a small badge in the
+  top-right corner of the home page's hero band, not one of the main
+  tiles. See "Admin: all submissions" below for how it works and its real
+  security limits.
 
 ## The five flows
 
@@ -71,11 +78,13 @@ Pages:
 Landing → privacy/consent → your name → ~30 questions → results (triangle
 chart, interpretation, strengths, overuse risks, communication tips, and a
 short "how others can work with you" section). Your name is asked up front
-(so your own results page and any file you export are clearly labelled)
-but stays in your own browser unless you choose to export something —
-there's no email step anywhere in this tool. At the end, there's an
-optional "Save result file" step (pre-filled with the name you already
-gave) for anyone contributing to a team exercise.
+(so your own results page and any file you export are clearly labelled) —
+there's no email step anywhere in this tool. The moment the results screen
+loads, a result file downloads to your device automatically (no click
+needed); a "Save again" button stays on the page if you want to re-save
+under a different name or the automatic download didn't fire. Either way,
+it's still just a file on your own device until someone actually hands it
+over for a team exercise — see "Data storage" below.
 
 ### 2. Communication guide ("Working with other colours")
 
@@ -202,13 +211,36 @@ an icon-tile grid — a colour-coded icon circle, a short title, and a
 one-line hint, on a plain white card — matching the app-launcher pattern
 used on ebi's other internal tools (e.g. the Vault app hub's "My Apps"
 grid), rather than the longer vertical description-cards used in an
-earlier version of this page. The four icon colours
-(`--tool-reflection` / `--tool-guide` / `--tool-team` / `--tool-blindspot`)
-are deliberately varied rather than brand purple/green throughout, so each
-tile reads as a distinct app at a glance — the same idea as the varied
-icon colours on ebi's own app tiles. The icons themselves are small
-hand-drawn inline SVGs (`ICONS` in `index.html`), not a reproduction of
-ebi's own icon set, which this app doesn't have access to.
+earlier version of this page. An earlier pass used a generic, off-brand
+Bootstrap-style palette here (orange/pink/blue/teal) purely to match the
+*varied-colour look* of those other app launchers; `--tool-reflection` /
+`--tool-team` / `--tool-blindspot` / `--tool-guide` now use ebi's own
+tones instead — Dark Purple, Medium Purple and Corporate Purple (ranked
+darkest-first to match how prominently each tool is placed on the page),
+plus a deeper, print-tested shade of Corporate Green for the guide banner
+below. The icons themselves are small hand-drawn inline SVGs (`ICONS` in
+`index.html`), not a reproduction of ebi's own icon set, which this app
+doesn't have access to.
+
+The tile grid is ordered and weighted by how the tools are actually used:
+**solo reflection** is the main, most-used entry point, so it renders as a
+larger, full-width, horizontal "featured" tile (`.mvs-tool-tile--featured`)
+above the smaller **team overlay** and **blind-spot exercise** tiles,
+which sit side by side below it. The **communication guide** ("Working
+with other colours") isn't in this grid at all — it's a different kind of
+thing, a reference lookup you can use anytime rather than a one-off
+workflow — so it gets its own distinctly-styled banner
+(`.mvs-guide-banner`) underneath: full-width, a rounded-square icon
+instead of a circle, a small "Reference guide" tag, and the green accent
+instead of the purple ramp, so it visually reads as a different category
+of tool rather than a fourth equal tile.
+
+The admin entry point (`admin.html`) is a small pill badge in the
+top-right corner of the home page's hero band (`.mvs-hero-admin-link`),
+not a tile or a footer link — deliberately low-key, matching that it's a
+soft-gated page for one person rather than a main flow for everyone. See
+"Admin: all submissions" above for what that passphrase does and doesn't
+protect against.
 
 Chart colours (`--series-people` / `--series-performance` / `--series-process`)
 are intentionally a separate system from the brand accent colours above —
@@ -421,8 +453,11 @@ own wording.)
 
 - **The solo reflection stays on the person's own device by default.**
   They're asked for their name up front (so their own results page and any
-  file they export are clearly labelled), but nothing leaves their browser
-  unless they explicitly choose to save a result file for a team exercise.
+  file they export are clearly labelled). A result file now saves to their
+  own downloads automatically as soon as they reach their results — but it
+  still only ever goes to their own device; nothing leaves their browser or
+  reaches anyone else unless they (or someone else) actively hand that
+  downloaded file over, e.g. for a team exercise.
 - **The team overlay and blind-spot exercise are named, not anonymous, by
   design** — that's the point of the exercise. Anyone who receives the
   shared folder of result/guesses files can see everyone's name alongside

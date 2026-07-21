@@ -51,22 +51,21 @@ const CONTENT = {
     notBody:
       "This is not a validated psychometric or clinical assessment, and it isn't affiliated with, endorsed by, or based on the proprietary content of any commercial personality or motivation assessment. It isn't designed or intended for hiring decisions, performance ratings, or any formal HR process — it's an educational reflection tool, and every screen in it says so.",
     cardsHeading: "My apps",
+    // Order matters here: solo reflection is the primary/most-used tool
+    // (rendered as the larger, featured tile), then team overlay, then
+    // the blind-spot exercise. The communication guide isn't in this
+    // list at all — it's a different kind of thing (an anytime reference
+    // guide, not a run-through-once workflow), so it gets its own
+    // separately-styled banner via CONTENT.home.guideCard instead of
+    // living in this tile grid alongside the other three.
     cards: [
       {
         title: "Solo reflection",
-        body: "The core 5–8 minute questionnaire, just for you.",
+        body: "The core 5–8 minute questionnaire, just for you. Start here.",
         href: "reflection.html",
         cta: "Start solo reflection",
         accent: "reflection",
         icon: "reflection",
-      },
-      {
-        title: "Working with other colours",
-        body: "A guide to working with each result, from any starting point.",
-        href: "guide.html",
-        cta: "Open the communication guide",
-        accent: "guide",
-        icon: "guide",
       },
       {
         title: "Team overlay",
@@ -85,7 +84,16 @@ const CONTENT = {
         icon: "blindspot",
       },
     ],
+    guideCard: {
+      tag: "Reference guide — usable anytime",
+      title: "Working with other colours",
+      body: "Not a one-off exercise like the tools above — a lookup guide for working with each result, from any starting point (pick your result, drag the triangle, or load a saved file).",
+      href: "guide.html",
+      cta: "Open the communication guide",
+      icon: "guide",
+    },
     adminLinkLabel: "Admin: view all submissions",
+    adminLinkShort: "Admin",
     adminLinkHref: "admin.html",
   },
 
@@ -248,6 +256,7 @@ const CONTENT = {
     points: [
       "Your answers are used only to calculate your own result, shown to you at the end.",
       "You'll be asked for your name next, so your own result is clearly yours — no email address is ever asked for.",
+      "When you reach your results, a small file with your name and result will download to your device automatically — this stays on your own computer and isn't sent anywhere unless you (or someone else) actively choose to share it, e.g. for a team exercise.",
       "We may store an anonymised, aggregated version of results (percentage splits only, with no name or other identifying detail) to help us understand overall patterns and improve this tool. Anonymised data cannot be traced back to you.",
       "You can stop at any point before submitting your answers without anything being saved.",
     ],
@@ -293,10 +302,12 @@ const CONTENT = {
     workingGuideIntro: (ownLabel) =>
       `Your own result is ${ownLabel}. Here's a short, practical guide to working with colleagues whose results lean differently — useful in meetings, feedback conversations and delegation.`,
     saveFileHeading: "Contributing to a team overlay or blind-spot exercise?",
+    saveFileAutoNote: (filename) =>
+      `A result file (${filename}) has already started downloading to your device automatically — you don't need to click anything for that part. This only ever goes to your own downloads; nothing is sent anywhere by this tool.`,
     saveFileNote:
-      "Save a small result file below and put it in your team's shared folder (OneDrive, Dropbox, Google Drive — whatever you already use). No account or setup needed — this is only for that; skip it if you're just doing this for yourself. We've filled in the name you gave earlier — change it here if you'd rather share under a different name.",
+      "Saving the file is only half the job, though: if you're contributing to a team overlay or blind-spot exercise, that file still needs to actually reach whoever's collecting them — email it to them, or put it in your team's shared folder (OneDrive, Dropbox, Google Drive, whatever you already use). Skip that step if you're just doing this for yourself. We've filled in the name you gave earlier below — change it and click the button if you'd rather save it again under a different name, or if the automatic download didn't work.",
     saveFileNamePlaceholder: "Your name",
-    saveFileCta: "Save result file",
+    saveFileCta: "Save again",
     footerNote:
       "Remember: this reflects how you answered today, in this context. " +
       "Motivation can shift with role, team and circumstance — treat this as " +
