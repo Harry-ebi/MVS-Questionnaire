@@ -136,9 +136,36 @@ body {
 }
 
 .mvs-brand-header .mvs-brand-mark {
-  width: 30px;
+  width: 27px;
   height: auto;
   flex-shrink: 0;
+}
+
+/* The logo mark itself: three simple ascending, pill-ended bars — a
+   plain, original growth/analytics glyph (not a reproduction of ebi's
+   own proprietary mark, which this app doesn't have access to), chosen
+   deliberately for how cleanly it reduces: no fine detail, crossing
+   lines or overlapping shapes to lose at a 27px header size, unlike an
+   earlier version of this mark. The two shorter bars pick up the same
+   colour as the "ebi" wordmark next to them; the tallest bar always
+   matches the green tagline underneath it, so the icon and the wordmark
+   read as one deliberately co-ordinated unit rather than two separately
+   coloured elements sitting side by side. */
+.mvs-brand-mark-bar {
+  fill: var(--accent-soft);
+}
+
+.mvs-brand-mark-bar--accent {
+  fill: var(--brand-green);
+}
+
+/* On the home page's dark hero band the mark is always white + green,
+   regardless of the app's light/dark theme — the same "fixed tone on a
+   fixed-colour surface" approach already used for the hero band's other
+   text (see .mvs-hero-word/.mvs-hero-title below), since that panel
+   never itself changes colour between themes. */
+.mvs-hero-logo .mvs-brand-mark-bar {
+  fill: #ffffff;
 }
 
 .mvs-brand-header .mvs-brand-word {
@@ -196,7 +223,7 @@ body {
 }
 
 .mvs-hero-logo {
-  width: 96px;
+  width: 66px;
   height: auto;
   display: block;
   margin-bottom: 10px;
@@ -326,6 +353,20 @@ h2 {
   color: var(--text-muted);
   font-size: 0.85rem;
   margin: 0;
+}
+
+/* Any inline text link inside ordinary copy (e.g. "Looking for the team
+   overlay or blind-spot exercise instead?") should read as part of this
+   app's own brand palette, not the browser's default blue/purple link
+   colours, which clash badly against the purple/green theme everywhere
+   else on the page. */
+.mvs-meta-line a {
+  color: var(--accent-soft);
+  font-weight: 700;
+}
+
+.mvs-meta-line a:visited {
+  color: var(--accent-soft);
 }
 
 .mvs-callout {

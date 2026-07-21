@@ -37,7 +37,7 @@ const CONTENT = {
   home: {
     title: "Ways of Working",
     intro:
-      "A short reflection tool on workplace motivation, and three ways to build on it with a team — no accounts, no installs, nothing to set up.",
+      "A short reflection tool on your priorities at work, and three ways to build on it with a team — no accounts, no installs, nothing to set up.",
     whatHeading: "What this is",
     whatBody:
       "Ways of Working is a short, original self-reflection tool built for ebi. It looks at what drives your day-to-day priorities at work across three broad areas — Drive, Connection and Clarity — and gives you a plain-English write-up of your own pattern, plus a couple of ways to explore that alongside a team.",
