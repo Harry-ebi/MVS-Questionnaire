@@ -18,22 +18,36 @@
 
   const PAIR_ORDER = ["performance", "people", "process"];
 
-  function primaryDimension(participant) {
-    const pct = participant.percentages || {};
-    return PAIR_ORDER.slice()
-      .sort((a, b) => (pct[b] || 0) - (pct[a] || 0))
-      .shift();
-  }
-
-  function pairKey(dimA, dimB) {
-    return [dimA, dimB].sort((a, b) => PAIR_ORDER.indexOf(a) - PAIR_ORDER.indexOf(b)).join("_");
-  }
-
   const DIMENSION_TO_CATEGORY = {
     performance: "performance_led",
     people: "people_led",
     process: "process_led",
   };
+
+  /**
+   * A participant's own saved `category` (one of the 7 blend categories)
+   * is the richest data already sitting in their result file — fall back
+   * to re-deriving it from their percentages only if it's missing or
+   * invalid (e.g. a hand-edited or older file).
+   */
+  function resolveCategory(participant) {
+    if (participant.category && CONTENT.categoryContent[participant.category]) {
+      return participant.category;
+    }
+    return deriveCategory(rankDimensions(participant.percentages));
+  }
+
+  function ranked(participant) {
+    return rankDimensions(participant.percentages);
+  }
+
+  function primaryDimension(participant) {
+    return ranked(participant)[0].dimension;
+  }
+
+  function secondaryDimension(participant) {
+    return ranked(participant)[1].dimension;
+  }
 
   function computeCounts(participants) {
     const counts = { performance: 0, people: 0, process: 0 };
@@ -44,12 +58,15 @@
   }
 
   /**
-   * Auto-generated, plain-English observations about the loaded group —
-   * dominant driver, any missing driver, and a small-sample caveat. Pulled
-   * together from data already on the page (each participant's primary
-   * driver) plus the existing per-category reference text, so nothing here
-   * is new copy invented about a specific team — it's the same category
-   * content already used elsewhere, applied at group level.
+   * Auto-generated, plain-English observations about the loaded group,
+   * assembled entirely from data already on the page (each participant's
+   * saved category and percentages) plus the existing per-category
+   * reference text — nothing here is new copy invented about a specific
+   * team. This used to sit alongside a fixed 3x3 "how the styles
+   * communicate" matrix, which was removed as redundant: the
+   * communication guide (guide.html) already covers pairwise dynamics in
+   * far more depth, so this section now goes deeper on the group itself
+   * instead of duplicating a lighter version of that other module.
    */
   function renderTeamAnalysisSection(participants) {
     if (participants.length < 2) {
@@ -69,14 +86,13 @@
       takeaways.push(c.analysisSampleCaveat(total));
     }
 
-    const ranked = PAIR_ORDER.slice().sort((a, b) => counts[b] - counts[a]);
-    const top = ranked[0];
-    const tiedForTop = ranked.filter((d) => counts[d] === counts[top]).length;
+    const topDim = PAIR_ORDER.slice().sort((a, b) => counts[b] - counts[a])[0];
+    const tiedForTop = PAIR_ORDER.filter((d) => counts[d] === counts[topDim]).length;
 
-    if (counts[top] > 0 && tiedForTop === 1) {
-      const label = dimNames[top];
-      takeaways.push(c.analysisDominant(label, counts[top], total));
-      const risk = CONTENT.categoryContent[DIMENSION_TO_CATEGORY[top]].overuseRisks[0];
+    if (counts[topDim] > 0 && tiedForTop === 1) {
+      const label = dimNames[topDim];
+      takeaways.push(c.analysisDominant(label, counts[topDim], total));
+      const risk = CONTENT.categoryContent[DIMENSION_TO_CATEGORY[topDim]].overuseRisks[0];
       takeaways.push(c.analysisWatchFor(label, risk));
     } else {
       takeaways.push(c.analysisNoDominant);
@@ -85,62 +101,49 @@
     const missing = PAIR_ORDER.filter((d) => counts[d] === 0);
     if (missing.length) {
       missing.forEach((d) => {
-        const focus = CONTENT.categoryContent[DIMENSION_TO_CATEGORY[d]].quickReference.focus;
-        takeaways.push(c.analysisGap(dimNames[d], focus));
+        const secondaryCount = participants.filter((p) => secondaryDimension(p) === d).length;
+        if (secondaryCount > 0) {
+          takeaways.push(c.analysisGapSoftened(dimNames[d], secondaryCount));
+        } else {
+          const focus = CONTENT.categoryContent[DIMENSION_TO_CATEGORY[d]].quickReference.focus;
+          takeaways.push(c.analysisGap(dimNames[d], focus));
+        }
       });
     } else {
       takeaways.push(c.analysisNoGap);
     }
 
-    return `
-      <section class="mvs-section">
-        <h2 class="mvs-section-title">${escapeHtml(c.analysisHeading)}</h2>
-        <p class="mvs-note">${escapeHtml(c.analysisIntro)}</p>
-        <ul class="mvs-list mvs-analysis-list">
-          ${takeaways.map((t) => `<li>${escapeHtml(t)}</li>`).join("")}
-        </ul>
-      </section>
-    `;
-  }
+    const ledCount = participants.filter((p) => resolveCategory(p).endsWith("_led")).length;
+    takeaways.push(c.analysisBlendSplit(ledCount, total - ledCount, total));
 
-  /**
-   * Communication matrix — a fixed 3x3 reference (every primary driver
-   * against every other, including itself) drawn from CONTENT.pairDynamics,
-   * the same original-wording pair notes used elsewhere. Always renders in
-   * full, even with no files loaded, so it works as a standalone reference;
-   * pairings actually present in the loaded group get a small badge rather
-   * than the matrix changing shape (a grid that drops cells depending on
-   * data is exactly the bug this replaced on the solo results PDF).
-   */
-  function renderCommunicationMatrixSection(participants) {
-    const counts = computeCounts(participants);
-    const order = PAIR_ORDER;
+    // Category breakdown: how many people fall into each of the 7 result
+    // categories (not just the 3 primary dimensions above) — richer than
+    // the primary-driver counts since it captures blends as their own
+    // thing rather than collapsing them into whichever dimension scored
+    // highest.
+    const categoryCounts = {};
+    participants.forEach((p) => {
+      const cat = resolveCategory(p);
+      categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
+    });
+    const breakdownRows = CONTENT.categoryOrder
+      .filter((catId) => categoryCounts[catId])
+      .sort((a, b) => categoryCounts[b] - categoryCounts[a])
+      .map((catId) => c.analysisBreakdownLine(CONTENT.categoryContent[catId].label, categoryCounts[catId], total));
 
-    const headerCells = order
-      .map((d) => `<th class="mvs-matrix-head mvs-matrix-head--${d}" scope="col">${escapeHtml(dimNames[d])}</th>`)
-      .join("");
-
-    const bodyRows = order
-      .map((rowDim) => {
-        const cells = order
-          .map((colDim) => {
-            const entry = CONTENT.pairDynamics[pairKey(rowDim, colDim)];
-            const isDiagonal = rowDim === colDim;
-            const present = isDiagonal ? counts[rowDim] >= 1 : counts[rowDim] > 0 && counts[colDim] > 0;
-            const badgeText = isDiagonal ? c.matrixCountLabel(counts[rowDim]) : c.matrixPresentBadge;
-            return `
-              <td class="mvs-matrix-cell${present ? " mvs-matrix-cell--present" : ""}">
-                <p class="mvs-matrix-cell-title">${escapeHtml(entry.title)}</p>
-                ${present ? `<span class="mvs-matrix-badge">${escapeHtml(badgeText)}</span>` : ""}
-                <p class="mvs-matrix-cell-body">${escapeHtml(entry.body)}</p>
-              </td>
-            `;
-          })
-          .join("");
+    const rosterRows = participants
+      .slice()
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map((p) => {
+        const cat = resolveCategory(p);
+        const label = CONTENT.categoryContent[cat].label;
         return `
           <tr>
-            <th class="mvs-matrix-head mvs-matrix-head--${rowDim}" scope="row">${escapeHtml(dimNames[rowDim])}</th>
-            ${cells}
+            <td>${escapeHtml(p.name)}</td>
+            <td>${escapeHtml(label)}</td>
+            <td>${escapeHtml(p.percentages.people)}%</td>
+            <td>${escapeHtml(p.percentages.performance)}%</td>
+            <td>${escapeHtml(p.percentages.process)}%</td>
           </tr>
         `;
       })
@@ -148,18 +151,33 @@
 
     return `
       <section class="mvs-section">
-        <h2 class="mvs-section-title">${escapeHtml(c.matrixHeading)}</h2>
-        <p class="mvs-note">${escapeHtml(c.matrixIntro)}</p>
+        <h2 class="mvs-section-title">${escapeHtml(c.analysisHeading)}</h2>
+        <p class="mvs-note">${escapeHtml(c.analysisIntro)}</p>
+
+        <h3 class="mvs-subheading">${escapeHtml(c.analysisBreakdownHeading)}</h3>
+        <ul class="mvs-list mvs-analysis-list">
+          ${breakdownRows.map((r) => `<li>${escapeHtml(r)}</li>`).join("")}
+        </ul>
+
+        <ul class="mvs-list mvs-analysis-list">
+          ${takeaways.map((t) => `<li>${escapeHtml(t)}</li>`).join("")}
+        </ul>
+
+        <h3 class="mvs-subheading">${escapeHtml(c.analysisRosterHeading)}</h3>
+        <p class="mvs-note">${escapeHtml(c.analysisRosterIntro)}</p>
         <div class="mvs-matrix-scroll">
-          <table class="mvs-comm-matrix">
+          <table class="mvs-submissions-table">
             <thead>
               <tr>
-                <th></th>
-                ${headerCells}
+                <th scope="col">${escapeHtml(c.colName)}</th>
+                <th scope="col">${escapeHtml(c.colResult)}</th>
+                <th scope="col">${escapeHtml(c.colPeople)}</th>
+                <th scope="col">${escapeHtml(c.colPerformance)}</th>
+                <th scope="col">${escapeHtml(c.colProcess)}</th>
               </tr>
             </thead>
             <tbody>
-              ${bodyRows}
+              ${rosterRows}
             </tbody>
           </table>
         </div>
@@ -259,8 +277,6 @@
 
         ${renderTeamAnalysisSection(participants)}
 
-        ${renderCommunicationMatrixSection(participants)}
-
         ${
           participants.length
             ? `
@@ -342,8 +358,6 @@
         </section>
 
         ${renderTeamAnalysisSection([])}
-
-        ${renderCommunicationMatrixSection([])}
       </div>
     `;
     wireFileInput();

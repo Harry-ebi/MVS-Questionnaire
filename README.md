@@ -99,14 +99,19 @@ your own starting point:
 - **Upload a previously-saved `result-*.json` file** (the same file the
   solo reflection and team overlay use).
 
-Once resolved, it shows a card for each of the other six results plus a
-card for meeting someone who shares your own result — seven in total, each
-with a "best approach", "what you bring", "watch for", and a one-line
-reminder. This is a *directional* guide (framed from your own result's
-perspective, not a generic one-size-fits-all blurb), inspired by the
-structure of a "my style × their style" communication matrix. See
-`CONTENT.commsGuide` below for how the content is put together. Has its
-own "Download as PDF" export.
+Once resolved, it first shows a **"Your result, in a nutshell"** overview —
+the same interpretation, strengths, overuse risks and "how others get the
+best from you" reference already used elsewhere in the tool, so someone
+arriving here without having done the full solo reflection still gets a
+proper explanation of what their result actually means before anything
+else. Underneath that, a **"Working with each result"** section shows a
+card for each of the other six results plus a card for meeting someone who
+shares your own result — seven in total, each with a "best approach",
+"what you bring", "watch for", and a one-line reminder. This is a
+*directional* guide (framed from your own result's perspective, not a
+generic one-size-fits-all blurb), inspired by the structure of a "my style
+× their style" communication matrix. See `CONTENT.commsGuide` below for
+how the content is put together. Has its own "Download as PDF" export.
 
 ### 3. Team overlay
 
@@ -116,21 +121,35 @@ anyone opens `team.html`, selects all of them at once, and sees:
 
 - everyone plotted as a labelled marker on one triangle, plus a "team
   average" marker and a full accessible data table underneath;
-- a **"Team takeaways"** section — a handful of auto-generated
-  observations about the loaded group: which driver is most common (and
-  the collective overuse risk that goes with it), whether any driver has
-  nobody representing it, and a small-sample caveat when fewer than three
-  files are loaded. These are assembled from the group's actual primary
-  drivers plus the same per-category reference text used elsewhere in the
-  tool — nothing here is bespoke commentary about named individuals;
-- a **"How the styles communicate"** matrix — a fixed 3×3 reference table
-  (every primary driver against every other, including itself) built from
-  `CONTENT.pairDynamics`. It always shows all nine combinations, even with
-  no files loaded, so it's useful as a standalone reference; whichever
-  combinations are actually present in the loaded group get a small
-  badge (a person/pair count) rather than the table changing shape.
+- an expanded **"Team takeaways"** section — a handful of auto-generated
+  observations about the loaded group, assembled entirely from data
+  already in the loaded files (nothing here is bespoke commentary about
+  named individuals):
+  - **"How the group breaks down"** — a count of the group against all
+    seven result categories (not just the three primary drivers), so
+    blends show up as their own thing rather than being folded into
+    whichever dimension scored highest;
+  - which primary driver is most common, and the collective overuse risk
+    that goes with it (or a "no clear dominant driver" note when it's an
+    even split);
+  - whether any driver has nobody representing it as their *primary* —
+    and if it still turns up as somebody's *secondary*, a softer note
+    saying so, rather than reporting it as fully absent from the room;
+  - a one-line split of how many people show one clear dominant driver
+    versus more of a blend across two or more areas;
+  - a small-sample caveat when fewer than three files are loaded;
+  - **"Who's in the room"** — a roster table (name, result, and all three
+    percentages, sorted alphabetically) for reference alongside the
+    takeaways above.
 
-Both sections, plus the chart and data table, are included in this page's
+  This replaces the old **"How the styles communicate"** 3×3 matrix,
+  which was removed as redundant: the communication guide (`guide.html`)
+  already covers pairwise "my style × their style" dynamics in much more
+  depth, so this section now goes deeper on the group itself instead of
+  duplicating a lighter version of that other module. The takeaways
+  section's intro links to the guide for that pairwise view.
+
+This section, plus the chart and data table, is included in this page's
 "Download as PDF" export.
 
 This is **named, not anonymous** — the privacy note on this page says so
@@ -162,8 +181,8 @@ or Google Sheets) alongside the usual "Download as PDF".
 
 It's behind a passphrase (`CONTENT.admin.passphrase` in `js/content.js`,
 default `changeme123` — change it before real use), and the page is only
-linked from a small text link at the bottom of the home page, not one of
-the main tiles or the nav.
+linked from a small badge in the top-right corner of the home page's hero
+band, not one of the main tiles or the nav.
 
 **Read this part properly:** the passphrase is a soft deterrent, not real
 security. It's checked entirely in this page's own JavaScript, which means
@@ -242,6 +261,22 @@ soft-gated page for one person rather than a main flow for everyone. See
 "Admin: all submissions" above for what that passphrase does and doesn't
 protect against.
 
+The ebi logo in every page's header is a link back to `index.html`
+(`.mvs-brand-link`, shared markup across `reflection.html`, `guide.html`,
+`guess.html`, `team.html` and `admin.html`) — a small, low-key way to get
+home from anywhere without hunting for the explicit "← Back to home" text
+links. The home page's own hero-band logo is deliberately left as a plain,
+non-clickable mark rather than a self-link — you're already home, so a
+link back to the same page would do nothing useful.
+
+Two small consistency fixes on the home page: the tool-tile / featured-tile
+/ guide-banner titles are `<h3>`s (not `<h2>`s) since they sit inside the
+"My apps" `<h2>`, keeping one clean heading hierarchy down the page instead
+of two h2s' worth of siblings-that-aren't-really-siblings; and the "What
+this is" / "What it's for" / "What it isn't" section titles use the same
+plain dark `.mvs-section-title` colour as every section title on every
+other page, rather than a one-off purple tint that only this page had.
+
 Chart colours (`--series-people` / `--series-performance` / `--series-process`)
 are intentionally a separate system from the brand accent colours above —
 they're contrast- and colour-vision-deficiency-checked for the triangle
@@ -259,15 +294,19 @@ Everything editorial lives in **`js/content.js`**:
   `overuseArrows` (a short "strength → overuse" quick-scan pair),
   `communicationTips`, `quickReference` (a compact "focus on / avoid"
   callout), and `howOthersCanWork`.
-- `CONTENT.pairDynamics` — the six "working together" notes behind the
-  team overlay's communication matrix (three cross-style pairs, three
-  same-style pairs — every cell in that 3×3 matrix maps to one of these).
 - `CONTENT.team` — besides the team-overlay screen copy, this holds the
-  wording templates for the auto-generated "Team takeaways" section
-  (`analysisDominant`, `analysisGap`, etc. — small functions filled in
-  with whichever driver/count/category text applies to the group
-  actually loaded) and the "How the styles communicate" matrix heading
-  and badge text.
+  wording templates for the auto-generated "Team takeaways" section:
+  `analysisDominant`/`analysisWatchFor`/`analysisNoDominant` (primary
+  driver), `analysisGap`/`analysisGapSoftened`/`analysisNoGap` (missing
+  driver, with the softer wording used when it still shows up as
+  somebody's secondary), `analysisBlendSplit` (led vs. blend ratio),
+  `analysisBreakdownHeading`/`analysisBreakdownLine` (the 7-category
+  breakdown list), and `analysisRosterHeading`/`analysisRosterIntro` plus
+  `colName`/`colResult`/`colPeople`/`colPerformance`/`colProcess` (the
+  "Who's in the room" roster table). All of it is small functions filled
+  in at render time with whichever driver/count/category applies to the
+  group actually loaded — there's no bespoke commentary about named
+  individuals anywhere in here.
 - `CONTENT.workingWithGuide` — the "quick guide to working with different
   results" shown near the bottom of the solo results page (and included
   in its PDF export): one entry per category — the three primary corners,
@@ -277,7 +316,15 @@ Everything editorial lives in **`js/content.js`**:
   the other six, leaving out whichever one matches the reader's own
   result.
 - `CONTENT.commsGuide` — powers `guide.html` ("Working with other
-  colours"). The one genuinely bespoke piece is `reminders[me][them]`, a
+  colours"). The page opens with an **overview section**
+  (`overviewHeading`/`overviewStrengthsHeading`/`overviewWatchHeading`/
+  `overviewApproachHeading`) that reuses the reader's own
+  `CONTENT.categoryContent` entry directly — `interpretation`, `strengths`,
+  `overuseArrows` and `quickReference` — rather than writing a second copy
+  of that content just for this page, since someone can land on
+  `guide.html` without ever having seen their own results page. Below that,
+  `cardsHeading`/`cardsIntro` head into the seven pairwise cards. The one
+  genuinely bespoke piece in the whole file is `reminders[me][them]`, a
   49-entry (7×7) grid of short, original one-line reminders written
   specifically for each ordered pair (e.g. `reminders.performance_led.people_led`
   is the reminder shown when a Performance-led reader is looking at the

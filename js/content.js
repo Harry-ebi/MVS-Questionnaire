@@ -169,10 +169,12 @@ const CONTENT = {
     invalidFileNote: (fileName) => `Skipped "${fileName}" — it doesn't look like a Ways of Working result file.`,
     analysisHeading: "Team takeaways",
     analysisIntro:
-      "A few observations based on the group you've loaded — useful as conversation starters, not conclusions.",
+      "A few observations based on the group you've loaded — useful as conversation starters, not conclusions. For a deeper look at how any two results tend to work together, use the communication guide from the home page instead — this section stays focused on the group as a whole.",
     analysisEmpty: "Load at least two result files to see takeaways about this group.",
     analysisSampleCaveat: (n) =>
       `Only ${n} result${n === 1 ? "" : "s"} loaded so far — treat these as early signals rather than settled patterns.`,
+    analysisBreakdownHeading: "How the group breaks down",
+    analysisBreakdownLine: (label, count, total) => `${label}: ${count} of ${total}`,
     analysisDominant: (label, count, total) =>
       `${label} is the clearest driver in this group — ${count} of ${total} people currently lean that way.`,
     analysisNoDominant:
@@ -181,12 +183,18 @@ const CONTENT = {
       `With ${label} as the dominant driver, the collective risk worth watching is: ${risk.charAt(0).toLowerCase()}${risk.slice(1)}`,
     analysisGap: (label, focus) =>
       `No one in this group shows ${label} as their primary driver — worth deliberately bringing in a focus on ${focus} before big decisions, since it won't come naturally from the room.`,
+    analysisGapSoftened: (label, count) =>
+      `No one shows ${label} as their primary driver, though it does show up as a secondary driver for ${count} people — so it's not entirely absent from the room, just not anyone's lead.`,
     analysisNoGap: "All three drivers — People, Performance and Process — are represented as someone's primary style in this group.",
-    matrixHeading: "How the styles communicate",
-    matrixIntro:
-      "A reference for how each pairing of primary drivers tends to work together. Cells marked “in this team” reflect pairings actually present among the people you've loaded.",
-    matrixPresentBadge: "In this team",
-    matrixCountLabel: (n) => `${n} on this team`,
+    analysisBlendSplit: (ledCount, blendCount, total) =>
+      `${ledCount} of ${total} show one clear, dominant driver; the other ${blendCount} show more of a blend across two or more areas.`,
+    analysisRosterHeading: "Who's in the room",
+    analysisRosterIntro: "Each person's own result, for reference alongside the takeaways above.",
+    colName: "Name",
+    colResult: "Result",
+    colPeople: "People",
+    colPerformance: "Performance",
+    colProcess: "Process",
     exportCta: "Download as PDF",
     exportNote: "This opens your browser's print dialog — choose “Save as PDF” as the destination.",
   },
@@ -859,51 +867,6 @@ const CONTENT = {
 
   /**
    * ------------------------------------------------------------------
-   * Pair dynamics reference
-   * ------------------------------------------------------------------
-   * Short, original-wording notes on how two dominant drivers tend to
-   * play out when they meet — either as two forces inside one person's
-   * blend, or (mainly) as two different people on a team. Used on the
-   * team overlay page as a "working together" quick reference. Keys
-   * are built by sorting each pair's dimensions in PAIR_ORDER
-   * (performance, people, process) and joining with "_".
-   * ------------------------------------------------------------------
-   */
-  pairDynamics: {
-    performance_people: {
-      title: "Performance + People",
-      body:
-        "One brings pace, the other brings connection. Together they can turn a goal into something the whole team actually buys into. Watch for a push-pull between 'let's move' and 'let's check in' — it helps to name that tension early rather than let it turn into friction.",
-    },
-    performance_process: {
-      title: "Performance + Process",
-      body:
-        "One brings drive, the other brings rigour. Together they tend to deliver work that is both fast and sound. Watch for tension between 'ship it now' and 'get it right' — it's worth agreeing up front which one wins for the task at hand.",
-    },
-    people_process: {
-      title: "People + Process",
-      body:
-        "One brings care for the team, the other brings care for the detail. Together they tend to reach decisions that are both fair and well thought through. Watch for decisions taking longer than the moment allows, especially when both full agreement and full accuracy are being sought at once.",
-    },
-    performance_performance: {
-      title: "Two Performance-led people",
-      body:
-        "Expect real pace and shared ambition — this pairing can move fast and hold each other to a high bar. Watch for competition over ownership, and for burnout when neither person wants to be the one to slow down.",
-    },
-    people_people: {
-      title: "Two People-led people",
-      body:
-        "Expect trust, warmth and a strong sense of team. Watch for difficult conversations being delayed by both sides, since neither person wants to be the one to raise them.",
-    },
-    process_process: {
-      title: "Two Process-led people",
-      body:
-        "Expect careful, well-governed work with few loose ends. Watch for decisions stalling as both sides keep refining, and for good opportunities being missed while the details are perfected.",
-    },
-  },
-
-  /**
-   * ------------------------------------------------------------------
    * "Working with different results" guide
    * ------------------------------------------------------------------
    * Shown on the solo results page (and included in its PDF export): a
@@ -1020,13 +983,22 @@ const CONTENT = {
     methodUploadButtonLabel: "Choose result file…",
     methodUploadInvalid: "That doesn't look like a Ways of Working result file — try another, or use one of the other two options above.",
     resultHeading: (label) => `Working from a ${label} starting point`,
-    resultIntro: (label, sourceLabel) =>
-      `${sourceLabel} Here's how to approach each of the other results, plus what to expect meeting someone who shares your ${label} result.`,
     sourcePick: "You told us your result directly.",
     sourceTriangle: (people, performance, process) =>
       `Based on where you placed yourself (People ${people}% · Performance ${performance}% · Process ${process}%).`,
     sourceUpload: (name) => `Based on the result file you loaded${name ? ` for ${name}` : ""}.`,
     changeStartCta: "Choose a different starting point",
+    // Overview section — a short "what your result means" recap shown
+    // before the pairwise cards below. Reachable directly from the home
+    // page without doing the full solo reflection first, so a reader
+    // might be seeing this result's write-up for the first time here.
+    overviewHeading: "Your result, in a nutshell",
+    overviewStrengthsHeading: "Strengths you bring",
+    overviewWatchHeading: "Worth watching for",
+    overviewApproachHeading: "How others get the best from you",
+    cardsHeading: "Working with each result",
+    cardsIntro: (label) =>
+      `Here's how to approach each of the other six results, plus what to expect meeting someone who shares your ${label} result.`,
     selfPairLabel: (label) => `Two ${label} people`,
     approachLabel: "Best approach",
     strengthLabel: "What you bring",

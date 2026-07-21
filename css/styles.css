@@ -108,11 +108,26 @@ body {
   max-width: var(--max-width);
   margin: 0 auto;
   padding: 20px 16px 14px;
+  border-bottom: 3px solid;
+  border-image: linear-gradient(90deg, var(--accent-soft), var(--brand-green)) 1;
+}
+
+/* The logo + wordmark are a link back to the home page on every screen
+   except the home page itself — reproduces the same flex layout the
+   header used to apply directly, now on the link that wraps it. */
+.mvs-brand-link {
   display: flex;
   align-items: center;
   gap: 10px;
-  border-bottom: 3px solid;
-  border-image: linear-gradient(90deg, var(--accent-soft), var(--brand-green)) 1;
+  text-decoration: none;
+  color: inherit;
+  width: fit-content;
+  transition: opacity 0.15s ease;
+}
+
+.mvs-brand-link:hover,
+.mvs-brand-link:focus-visible {
+  opacity: 0.72;
 }
 
 .mvs-brand-header .mvs-brand-mark {
@@ -368,75 +383,15 @@ h2 {
   color: var(--text-secondary);
 }
 
-/* Communication matrix (team overlay "how the styles communicate") -- */
-
+/* Horizontal-scroll wrapper for wide tables (submissions table on both
+   admin.html and the team overlay's roster) — lets the table itself stay
+   readable-width instead of squeezing to fit a narrow screen. */
 .mvs-matrix-scroll {
   overflow-x: auto;
 }
 
-.mvs-comm-matrix {
-  width: 100%;
-  min-width: 640px;
-  border-collapse: collapse;
-  table-layout: fixed;
-}
-
-.mvs-comm-matrix th,
-.mvs-comm-matrix td {
-  border: 1px solid var(--border-hairline);
-  vertical-align: top;
-}
-
-.mvs-matrix-head {
-  background: var(--surface-card);
-  padding: 8px 10px;
-  font-size: 0.78rem;
-  text-align: left;
-  color: var(--text-primary);
-  border-left-width: 4px;
-  border-left-style: solid;
-}
-
-.mvs-matrix-head--performance {
-  border-left-color: var(--series-performance);
-}
-.mvs-matrix-head--people {
-  border-left-color: var(--series-people);
-}
-.mvs-matrix-head--process {
-  border-left-color: var(--series-process);
-}
-
-.mvs-matrix-cell {
-  width: 25%;
-  padding: 10px 12px;
-}
-
-.mvs-matrix-cell--present {
-  background: rgba(143, 114, 177, 0.08); /* soft tint of ebi Corporate Purple, --accent-soft */
-}
-
-.mvs-matrix-cell-title {
-  margin: 0 0 4px 0;
-  font-size: 0.82rem;
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
-.mvs-matrix-badge {
-  display: inline-block;
-  margin-bottom: 6px;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: var(--accent-soft);
-  color: #ffffff;
-  font-size: 0.66rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-}
-
-/* Admin "all submissions" table -------------------------------------- */
+/* Submissions / roster table (admin "all submissions" and the team
+   overlay's "who's in the room" roster share this one style) --------- */
 
 .mvs-submissions-table {
   width: 100%;
@@ -460,13 +415,6 @@ h2 {
 
 .mvs-submissions-table tbody tr:nth-child(even) {
   background: var(--surface-card);
-}
-
-.mvs-matrix-cell-body {
-  margin: 0;
-  font-size: 0.78rem;
-  line-height: 1.45;
-  color: var(--text-secondary);
 }
 
 /* "Working with different results" guide (solo results page) -------- */
@@ -879,6 +827,17 @@ h2 {
   margin-bottom: 10px;
 }
 
+/* Smaller heading for a sub-part of a section (e.g. "How the group
+   breaks down" / "Who's in the room" within the team overlay's
+   takeaways) — a step down from .mvs-section-title, not a new top-level
+   section of its own. */
+.mvs-subheading {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 18px 0 8px;
+}
+
 .mvs-interpretation {
   font-size: 1rem;
   color: var(--text-primary);
@@ -1124,11 +1083,11 @@ h2 {
   background: var(--surface-card);
 }
 
-/* Home "about" blocks (what this is / what it's for / what it isn't) --- */
-
-.mvs-about-block .mvs-section-title {
-  color: var(--accent-soft);
-}
+/* Home "about" blocks (what this is / what it's for / what it isn't) ---
+   Section titles here deliberately stay the same plain dark colour as
+   every .mvs-section-title elsewhere in the app (results, team, guide,
+   admin, etc.) rather than a one-off accent tint, so the home page reads
+   as part of the same system instead of a specially-decorated cover. --- */
 
 .mvs-about-block--not {
   background: var(--surface-card);
@@ -1208,7 +1167,7 @@ h2 {
   background: var(--tool-blindspot);
 }
 
-.mvs-tool-tile h2 {
+.mvs-tool-tile h3 {
   margin: 0;
   font-size: 0.92rem;
 }
@@ -1242,7 +1201,7 @@ h2 {
   height: 34px;
 }
 
-.mvs-tool-featured-text h2 {
+.mvs-tool-featured-text h3 {
   font-size: 1.05rem;
   margin-bottom: 2px;
 }
@@ -1304,7 +1263,7 @@ h2 {
   margin-bottom: 3px;
 }
 
-.mvs-guide-banner-text h2 {
+.mvs-guide-banner-text h3 {
   margin: 0 0 2px 0;
   font-size: 0.98rem;
 }
@@ -1439,23 +1398,16 @@ h2 {
     margin-bottom: 16px;
   }
 
-  /* On screen, the communication matrix scrolls sideways if the page is
-     narrow (its 640px min-width). Paper has no scrollbar, so let it
-     shrink to the printable page width instead — table-layout:fixed
-     with percentage cell widths reflows fine at any width. */
+  /* On screen, wide tables (submissions/roster) scroll sideways if the
+     page is narrow (their 640px min-width). Paper has no scrollbar, so
+     let them shrink to the printable page width instead. */
   .mvs-matrix-scroll {
     overflow: visible;
   }
 
-  .mvs-comm-matrix,
   .mvs-submissions-table {
     min-width: 0;
     width: 100%;
-  }
-
-  .mvs-matrix-cell-body,
-  .mvs-matrix-cell-title {
-    font-size: 0.72rem;
   }
 
   .mvs-submissions-table th,
@@ -1505,7 +1457,6 @@ h2 {
   .mvs-arrow-row,
   .mvs-wwd-card,
   .mvs-overlay-table tr,
-  .mvs-comm-matrix tr,
   .mvs-submissions-table tr,
   .mvs-list li,
   /* Each person's actual-vs-guesses block on the blind-spot reveal

@@ -99,7 +99,7 @@
             <a class="mvs-tool-tile mvs-tool-tile--featured mvs-tool-tile--${featuredCard.accent}" href="${featuredCard.href}">
               <span class="mvs-tool-icon">${ICONS[featuredCard.icon] || ""}</span>
               <span class="mvs-tool-featured-text">
-                <h2>${featuredCard.title}</h2>
+                <h3>${featuredCard.title}</h3>
                 <p>${featuredCard.body}</p>
               </span>
             </a>
@@ -110,7 +110,7 @@
                   (card) => `
                 <a class="mvs-tool-tile mvs-tool-tile--${card.accent}" href="${card.href}">
                   <span class="mvs-tool-icon">${ICONS[card.icon] || ""}</span>
-                  <h2>${card.title}</h2>
+                  <h3>${card.title}</h3>
                   <p>${card.body}</p>
                 </a>
               `
@@ -122,7 +122,7 @@
               <span class="mvs-guide-banner-icon">${ICONS[c.guideCard.icon] || ""}</span>
               <span class="mvs-guide-banner-text">
                 <span class="mvs-guide-banner-tag">${c.guideCard.tag}</span>
-                <h2>${c.guideCard.title}</h2>
+                <h3>${c.guideCard.title}</h3>
                 <p>${c.guideCard.body}</p>
               </span>
             </a>

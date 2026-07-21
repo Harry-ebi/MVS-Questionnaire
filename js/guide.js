@@ -27,6 +27,31 @@
     return div.innerHTML;
   }
 
+  function renderQuickReference(ref) {
+    if (!ref) return "";
+    return `
+      <div class="mvs-quick-reference">
+        <p><strong>Focus on:</strong> ${escapeHtml(ref.focus)}</p>
+        <p><strong>Avoid:</strong> ${escapeHtml(ref.avoid)}</p>
+      </div>
+    `;
+  }
+
+  function renderOveruseArrows(arrows) {
+    if (!arrows || !arrows.length) return "";
+    return `
+      <div class="mvs-arrow-row">
+        ${arrows
+          .map(
+            (a) => `
+          <span class="mvs-arrow-tag"><strong>${escapeHtml(a.strength)}</strong> &rarr; ${escapeHtml(a.overuse)}</span>
+        `
+          )
+          .join("")}
+      </div>
+    `;
+  }
+
   function readFileAsJson(file) {
     return new Promise((resolve) => {
       const reader = new FileReader();
@@ -209,13 +234,31 @@
         <a href="index.html" class="mvs-meta-line mvs-print-hide">&larr; Back to home</a>
 
         <section class="mvs-section">
-          <p class="mvs-note">${escapeHtml(c.resultIntro(meLabel, sourceLine))}</p>
+          <p class="mvs-note">${escapeHtml(sourceLine)}</p>
           <button type="button" class="mvs-btn mvs-btn--ghost mvs-print-hide" id="mvs-guide-restart">${escapeHtml(
             c.changeStartCta
           )}</button>
         </section>
 
         <section class="mvs-section">
+          <h2 class="mvs-section-title">${escapeHtml(c.overviewHeading)}</h2>
+          <p class="mvs-interpretation">${escapeHtml(me.interpretation)}</p>
+
+          <h3 class="mvs-subheading">${escapeHtml(c.overviewStrengthsHeading)}</h3>
+          <ul class="mvs-list">
+            ${me.strengths.map((s) => `<li>${escapeHtml(s)}</li>`).join("")}
+          </ul>
+
+          <h3 class="mvs-subheading">${escapeHtml(c.overviewWatchHeading)}</h3>
+          ${renderOveruseArrows(me.overuseArrows)}
+
+          <h3 class="mvs-subheading">${escapeHtml(c.overviewApproachHeading)}</h3>
+          ${renderQuickReference(me.quickReference)}
+        </section>
+
+        <section class="mvs-section">
+          <h2 class="mvs-section-title">${escapeHtml(c.cardsHeading)}</h2>
+          <p class="mvs-note">${escapeHtml(c.cardsIntro(meLabel))}</p>
           <div class="mvs-wwd-grid">
             ${cards}
           </div>
