@@ -97,21 +97,23 @@ const SupabaseClient = (function () {
    * Select every row from `table`, using a signed-in admin's access
    * token. Only returns anything because the table's Row Level Security
    * policy grants `select` to `authenticated` — i.e. someone who actually
-   * signed in via signIn() above. Returns { ok, data } like rpc() above,
-   * so callers can tell "genuinely no rows yet" apart from "couldn't
-   * reach the database".
+   * signed in via signIn() above. Returns { ok, data, status } like rpc()
+   * above, so callers can tell "genuinely no rows yet" apart from
+   * "couldn't reach the database" apart from "the access token itself was
+   * rejected" (status 401/403 — most often an expired sign-in session,
+   * not a real outage) using the status code.
    */
   async function selectAll(table, accessToken) {
     try {
       const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?select=*`, {
         headers: restHeaders(accessToken),
       });
-      if (!res.ok) return { ok: false, data: [] };
+      if (!res.ok) return { ok: false, data: [], status: res.status };
       const data = await res.json();
-      return { ok: true, data: Array.isArray(data) ? data : [] };
+      return { ok: true, data: Array.isArray(data) ? data : [], status: res.status };
     } catch (err) {
       console.warn(`Supabase select from "${table}" failed:`, err);
-      return { ok: false, data: [] };
+      return { ok: false, data: [], status: null };
     }
   }
 
@@ -121,7 +123,8 @@ const SupabaseClient = (function () {
    * policy grants `delete` to `authenticated` (see README.md's
    * "Database setup" section) — without that policy this simply fails,
    * the same fail-soft way as every other method here. Returns
-   * true/false, never throws.
+   * { ok, status } (rather than a bare boolean) so callers can tell an
+   * expired/rejected access token (401/403) apart from any other failure.
    */
   async function remove(table, id, accessToken) {
     try {
@@ -129,10 +132,10 @@ const SupabaseClient = (function () {
         method: "DELETE",
         headers: { ...restHeaders(accessToken), Prefer: "return=minimal" },
       });
-      return res.ok;
+      return { ok: res.ok, status: res.status };
     } catch (err) {
       console.warn(`Supabase delete from "${table}" failed:`, err);
-      return false;
+      return { ok: false, status: null };
     }
   }
 

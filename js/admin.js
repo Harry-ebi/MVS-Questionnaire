@@ -296,6 +296,18 @@
 
     const result = await SupabaseClient.selectAll("submissions", accessToken);
     if (!result.ok) {
+      // A 401/403 here almost always means the admin sign-in itself has
+      // expired (Supabase access tokens are short-lived, and this page
+      // never refreshes one automatically) -- not that the database is
+      // unreachable. Showing the generic "couldn't reach the database"
+      // message in that case is actively misleading, since refreshing
+      // the page just re-sends the same expired token and fails again.
+      // Clear the stale session and send the person back to sign in.
+      if (result.status === 401 || result.status === 403) {
+        clearSession();
+        renderGate(c.sessionExpiredNotice);
+        return;
+      }
       renderAdmin([], true);
       return;
     }
@@ -432,13 +444,17 @@
           const session = getSession();
           const accessToken = session && session.access_token;
           btn.disabled = true;
-          const ok =
+          const result =
             accessToken && typeof SupabaseClient !== "undefined"
               ? await SupabaseClient.remove("submissions", id, accessToken)
-              : false;
-          if (ok) {
+              : { ok: false, status: null };
+          if (result.ok) {
             records = records.filter((r) => r.id !== id);
             deleteError = false;
+          } else if (result.status === 401 || result.status === 403) {
+            clearSession();
+            renderGate(c.sessionExpiredNotice);
+            return;
           } else {
             deleteError = true;
           }

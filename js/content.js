@@ -120,6 +120,7 @@ const CONTENT = {
     passwordPlaceholder: "Enter your password",
     loginCta: "Sign in",
     loginError: "That email or password wasn't right — double-check them and try again.",
+    sessionExpiredNotice: "Your admin sign-in has expired — please sign in again.",
     signOutCta: "Sign out",
     loadHeading: "Import older result files (optional)",
     loadIntro:
