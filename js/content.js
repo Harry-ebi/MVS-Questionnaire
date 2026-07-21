@@ -579,7 +579,7 @@ const CONTENT = {
         { strength: "Inclusiveness", overuse: "can slow a decision while everyone is consulted" },
       ],
       quickReference: {
-        focus: "the impact on people, and involve them early",
+        focus: "the impact on people, and being involved early",
         avoid: "blunt asks with no context",
       },
     },
@@ -719,8 +719,8 @@ const CONTENT = {
         { strength: "Structured pace", overuse: "can read as impatience with open-ended discussion" },
       ],
       quickReference: {
-        focus: "which matters more right now, speed or thoroughness",
-        avoid: "leaving your standard unspoken so it looks like criticism",
+        focus: "speed or thoroughness, whichever matters more right now",
+        avoid: "giving feedback without first explaining the standard behind it",
       },
     },
 
@@ -754,7 +754,7 @@ const CONTENT = {
         { strength: "Thoroughness", overuse: "can turn into over-explaining a simple call" },
       ],
       quickReference: {
-        focus: "a fair process and a timely decision, together",
+        focus: "a fair process alongside a timely decision",
         avoid: "waiting for full consensus when the call is already clear enough",
       },
     },
@@ -789,7 +789,7 @@ const CONTENT = {
         { strength: "Range", overuse: "can spread your energy thin across all three areas" },
       ],
       quickReference: {
-        focus: "naming which driver matters most to you in the moment",
+        focus: "a clear signal of which driver matters most to you right now",
         avoid: "assuming your flexibility is obvious without saying so",
       },
     },
