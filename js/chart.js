@@ -2,24 +2,28 @@
  * chart.js
  * -----------------------------------------------------------------------
  * All chart rendering for the tool:
- *   - renderResultsChart        single-person result: horizontal score
- *                                bars, one per dimension (not a triangle)
+ *   - renderResultsChart        single-person result: one marker on the
+ *                                triangle, plus an accessible labelled
+ *                                bar/legend underneath
  *   - renderPriorityShiftChart  Everyday Priorities vs. Priorities Under
- *                                Pressure: a three-lane visual, one lane
- *                                per dimension (not a triangle or arrow)
+ *                                Pressure: both points plotted on the same
+ *                                triangle, joined by a plain connecting
+ *                                line (no arrowhead), distinguished by
+ *                                marker shape (circle vs. diamond) as well
+ *                                as position
  *   - renderOverlayChart        many people's real results on one triangle
  *   - renderPerceptionChart     one person's guesses vs. their actual result
  *   - createInteractiveTriangle  draggable input, used by the blind-spot
  *                                guessing exercise to let someone place a
  *                                guess
  *
- * The triangle remains only for the multi-person/guessing charts, where
- * plotting several people's positions on one shared plane is genuinely
- * useful; it is an original geometric design — a plain equilateral
- * triangle with position markers, no regions, no proprietary labels or
- * layout. The single-person result and the Priorities Under Pressure
- * comparison deliberately avoid a triangle or arrow-based layout — see
- * README.md for the reasoning.
+ * Every chart here shares the same original triangle geometry — a plain
+ * equilateral triangle with position markers, no regions, no proprietary
+ * labels or layout, in this tool's own amber/purple/teal palette. It is
+ * an independently designed graphic, not a reproduction of any commercial
+ * assessment's triangle. The Priority Shift chart deliberately still
+ * avoids an arrowhead: the connecting line between the two points is
+ * plain, so the shape doesn't itself imply "escalation" or "conflict."
  * -----------------------------------------------------------------------
  */
 
@@ -249,25 +253,20 @@ function drawVertexLabels(svg, dimensionNames, percentages) {
 }
 
 // ------------------------------------------------------------------
-// Single-person results chart — horizontal score bars
+// Single-person results chart — one marker on the triangle, plus an
+// accessible labelled bar/legend underneath
 // ------------------------------------------------------------------
 
 /**
- * The primary single-person results chart: one horizontal bar per
- * dimension, each showing its own percentage independently (rather than
- * one shared 100%-stacked bar, and rather than a triangle position).
- * This makes the three scores directly, individually comparable.
+ * Builds the labelled bar/legend block used underneath the results
+ * triangle (and as the sole content of the aria-label's accessible
+ * fallback) — one row per dimension, each showing its own percentage
+ * independently so all three scores stay directly, individually
+ * comparable even without reading the triangle position.
  */
-function renderResultsChart(container, percentages, dimensionNames) {
-  container.innerHTML = "";
-
+function buildScoreBarsElement(percentages, dimensionNames) {
   const wrap = document.createElement("div");
   wrap.className = "mvs-scorebars";
-  wrap.setAttribute("role", "img");
-  wrap.setAttribute(
-    "aria-label",
-    `Score bars: ${DIMS.map((d) => `${dimensionNames[d]} ${percentages[d]}%`).join(", ")}`
-  );
 
   DIMS.forEach((d) => {
     const row = document.createElement("div");
@@ -295,15 +294,47 @@ function renderResultsChart(container, percentages, dimensionNames) {
     wrap.appendChild(row);
   });
 
-  container.appendChild(wrap);
+  return wrap;
+}
+
+/**
+ * The primary single-person results chart: the person's result plotted
+ * as one marker on the triangle (same geometry/colours as the rest of
+ * the tool), plus an accessible labelled bar/legend underneath showing
+ * the exact percentages.
+ */
+function renderResultsChart(container, percentages, dimensionNames) {
+  container.innerHTML = "";
+  const markerInk = "#0b0b0b" /* fixed: this dot sits on the marker ring's fixed-white knockout fill, not the app's theme */;
+
+  const svg = svgEl("svg", {
+    viewBox: "0 0 300 260",
+    class: "mvs-triangle mvs-triangle--results",
+    role: "img",
+    "aria-label": `Triangle showing your result: ${DIMS.map((d) => `${dimensionNames[d]} ${percentages[d]}%`).join(", ")}`,
+  });
+
+  drawTriangleSkeleton(svg);
+  drawVertexLabels(svg, dimensionNames, percentages);
+
+  const point = barycentricPoint(percentages);
+  svg.appendChild(svgEl("circle", { cx: point.x, cy: point.y, r: 11, class: "mvs-results-marker-ring" }));
+  svg.appendChild(svgEl("circle", { cx: point.x, cy: point.y, r: 5, fill: markerInk, class: "mvs-results-marker-dot" }));
+
+  const triangleWrap = document.createElement("div");
+  triangleWrap.className = "mvs-triangle-wrap";
+  triangleWrap.appendChild(svg);
+  container.appendChild(triangleWrap);
+
+  container.appendChild(buildScoreBarsElement(percentages, dimensionNames));
 }
 
 // ------------------------------------------------------------------
-// Priority Shift chart — three horizontal lanes (one per dimension),
-// each with an Everyday Priorities marker and a Priorities Under
-// Pressure marker along a 0-100 track, joined by a plain connecting
-// bar. Deliberately not a triangle or an arrow: this is a separate,
-// original visual built for this comparison specifically.
+// Priority Shift chart — both the Everyday Priorities point and the
+// Priorities Under Pressure point plotted on the same triangle, joined
+// by a plain connecting line. Deliberately no arrowhead on that line, so
+// the shape doesn't itself read as "escalation" — the two positions are
+// told apart by marker shape (circle vs. diamond) as well as position.
 // ------------------------------------------------------------------
 
 /**
@@ -313,70 +344,56 @@ function renderResultsChart(container, percentages, dimensionNames) {
 function renderPriorityShiftChart(container, everydayPercentages, pressurePercentages, dimensionNames, legendLabels) {
   container.innerHTML = "";
 
-  const wrap = document.createElement("div");
-  wrap.className = "mvs-priority-shift";
-  wrap.setAttribute("role", "img");
-  wrap.setAttribute(
-    "aria-label",
-    `Priority Shift: ${DIMS.map(
+  const svg = svgEl("svg", {
+    viewBox: "0 0 300 260",
+    class: "mvs-triangle mvs-triangle--shift",
+    role: "img",
+    "aria-label": `Priority Shift: ${DIMS.map(
       (d) => `${dimensionNames[d]} — ${legendLabels.everyday} ${everydayPercentages[d]}%, ${legendLabels.pressure} ${pressurePercentages[d]}%`
-    ).join("; ")}`
-  );
-
-  DIMS.forEach((d) => {
-    const everydayPct = everydayPercentages[d];
-    const pressurePct = pressurePercentages[d];
-    const delta = pressurePct - everydayPct;
-    const deltaText = delta === 0 ? "No change" : `${delta > 0 ? "+" : ""}${delta}pp`;
-
-    const lane = document.createElement("div");
-    lane.className = "mvs-priority-lane";
-
-    const header = document.createElement("div");
-    header.className = "mvs-priority-lane-header";
-    const laneLabel = document.createElement("span");
-    laneLabel.className = "mvs-priority-lane-label";
-    laneLabel.style.color = colorFor(d);
-    laneLabel.textContent = dimensionNames[d];
-    const laneDelta = document.createElement("span");
-    laneDelta.className = "mvs-priority-lane-delta";
-    laneDelta.textContent = deltaText;
-    header.appendChild(laneLabel);
-    header.appendChild(laneDelta);
-
-    const track = document.createElement("div");
-    track.className = "mvs-priority-lane-track";
-
-    const lo = Math.min(everydayPct, pressurePct);
-    const hi = Math.max(everydayPct, pressurePct);
-    const connector = document.createElement("span");
-    connector.className = "mvs-priority-lane-connector";
-    connector.style.left = `${lo}%`;
-    connector.style.width = `${Math.max(hi - lo, 0)}%`;
-    connector.style.background = colorFor(d);
-    track.appendChild(connector);
-
-    const everydayMarker = document.createElement("span");
-    everydayMarker.className = "mvs-priority-lane-marker mvs-priority-lane-marker--everyday";
-    everydayMarker.style.left = `${everydayPct}%`;
-    everydayMarker.style.borderColor = colorFor(d);
-    everydayMarker.title = `${legendLabels.everyday}: ${everydayPct}%`;
-    track.appendChild(everydayMarker);
-
-    const pressureMarker = document.createElement("span");
-    pressureMarker.className = "mvs-priority-lane-marker mvs-priority-lane-marker--pressure";
-    pressureMarker.style.left = `${pressurePct}%`;
-    pressureMarker.style.background = colorFor(d);
-    pressureMarker.style.borderColor = colorFor(d);
-    pressureMarker.title = `${legendLabels.pressure}: ${pressurePct}%`;
-    track.appendChild(pressureMarker);
-
-    lane.appendChild(header);
-    lane.appendChild(track);
-    wrap.appendChild(lane);
+    ).join("; ")}`,
   });
 
-  container.appendChild(wrap);
+  drawTriangleSkeleton(svg);
+  drawVertexLabels(svg, dimensionNames, null);
+
+  const everydayPoint = barycentricPoint(everydayPercentages);
+  const pressurePoint = barycentricPoint(pressurePercentages);
+
+  // Plain connecting line -- no marker-end/arrowhead.
+  svg.appendChild(
+    svgEl("line", {
+      x1: everydayPoint.x,
+      y1: everydayPoint.y,
+      x2: pressurePoint.x,
+      y2: pressurePoint.y,
+      class: "mvs-shift-connector-line",
+    })
+  );
+
+  svg.appendChild(
+    svgEl("circle", {
+      cx: everydayPoint.x,
+      cy: everydayPoint.y,
+      r: 9,
+      class: "mvs-shift-marker mvs-shift-marker--everyday",
+    })
+  );
+
+  svg.appendChild(
+    svgEl("rect", {
+      x: pressurePoint.x - 6.5,
+      y: pressurePoint.y - 6.5,
+      width: 13,
+      height: 13,
+      transform: `rotate(45 ${pressurePoint.x} ${pressurePoint.y})`,
+      class: "mvs-shift-marker mvs-shift-marker--pressure",
+    })
+  );
+
+  const triangleWrap = document.createElement("div");
+  triangleWrap.className = "mvs-triangle-wrap";
+  triangleWrap.appendChild(svg);
+  container.appendChild(triangleWrap);
 
   // Legend — shape-coded, not colour-coded, so it reads correctly in
   // greyscale print and for colour-vision-deficient readers.

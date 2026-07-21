@@ -370,9 +370,10 @@ reordered), and `pattern` should hold a value like `focused_drive`,
 ### 1. Solo reflection
 
 Landing → privacy/consent → your name (plus an optional team code) → ~30
-questions → results (horizontal score bars, interpretation, potential
-strengths, a "when your approach goes too far" section, communication
-tips, and a short "how others can work with you" section). Your name is
+questions → results (triangle chart with a labelled bar/legend
+underneath, interpretation, potential strengths, a "when your approach
+goes too far" section, communication tips, and a short "how others can
+work with you" section). Your name is
 asked up front (so your own results page and any file you export are
 clearly labelled) — there's no email step anywhere in this tool. The team
 code is only relevant if a facilitator gave you one for a team exercise;
@@ -545,13 +546,12 @@ itself once the other two are placed) — rather than picking just one, so
 someone's *relative* priorities under pressure can be measured rather
 than a single pick each time.
 
-The result — "Priorities Under Pressure" — plots the Everyday and
-under-pressure points on a three-lane **"Priority Shift"** visual: one
-horizontal lane per dimension, a circle marker for the Everyday
-Priorities position, a diamond marker for the Priorities Under Pressure
-position, and a plain connecting bar between them (deliberately not an
-arrow or a triangle, so no reading of "movement toward conflict" is
-implied by the shape itself). Alongside that:
+The result — "Priorities Under Pressure" — plots both the Everyday and
+under-pressure points on the same triangle as a **"Priority Shift"**
+chart: a circle marker for the Everyday Priorities position, a diamond
+marker for the Priorities Under Pressure position, joined by a plain
+connecting line (deliberately no arrowhead, so no reading of "movement
+toward conflict" is implied by the shape itself). Alongside that:
 
 - a **Degree of Change** score and band (Limited / Noticeable /
   Significant / Marked), measuring how far the two points sit apart —
@@ -784,31 +784,32 @@ third-party scoring algorithm:
 
 ## The charts (`js/chart.js`)
 
-Two chart families, chosen deliberately to avoid a single triangle
-graphic doing every job:
+Every chart shares the same original triangle geometry — Connection at
+the top vertex, Drive at bottom-left, Clarity at bottom-right
+(`TRIANGLE_VERTICES` in `chart.js`) — since plotting one or more
+positions on a shared plane, or letting someone drag a point to set three
+percentages at once, is genuinely well served by a triangle. It's an
+independently laid out geometry using this tool's own amber/purple/teal
+colours, not a reproduction of any commercial assessment's triangle
+graphic:
 
-- **One person's result** (`renderResultsChart`) is a set of independent
-  horizontal **score bars**, one per dimension (`.mvs-scorebars` /
-  `.mvs-scorebar-row` / `.mvs-scorebar-track` / `.mvs-scorebar-fill`),
-  each showing its own 0–100% fill rather than one stacked bar or a
-  triangle — deliberately not a triangular graphic.
-- **Priorities Under Pressure movement** (`renderPriorityShiftChart`) is
-  a three-lane **"Priority Shift"** visual (`.mvs-priority-shift` /
-  `.mvs-priority-lane`), one lane per dimension: a circle marker for the
-  Everyday Priorities position, a diamond marker for the Priorities Under
-  Pressure position, and a plain connecting bar between the two —
-  deliberately not an arrow or a triangle, so the shape itself doesn't
-  imply "escalation" or "conflict."
+- **One person's result** (`renderResultsChart`) plots a single marker
+  (`.mvs-results-marker-ring` / `.mvs-results-marker-dot`) on the
+  triangle, plus an accessible labelled bar/legend underneath
+  (`.mvs-scorebars`) giving the exact percentages independently of the
+  triangle position.
+- **Priorities Under Pressure movement** (`renderPriorityShiftChart`)
+  plots both the Everyday Priorities point and the Priorities Under
+  Pressure point on the same triangle, joined by a plain connecting line
+  (`.mvs-shift-connector-line`) — deliberately **no arrowhead**, so the
+  line itself doesn't imply "escalation" or "conflict." The two points
+  are told apart by marker shape as well as position: a solid circle for
+  Everyday Priorities (`.mvs-shift-marker--everyday`) and an outlined
+  diamond for Priorities Under Pressure (`.mvs-shift-marker--pressure`).
 - **Multi-person overlay** (`renderOverlayChart`), the **blind-spot
   reveal** (`renderPerceptionChart`), and the **draggable input**
-  (`createInteractiveTriangle`) keep an original triangle layout —
-  Connection at the top vertex, Drive at bottom-left, Clarity at
-  bottom-right (`TRIANGLE_VERTICES` in `chart.js`) — since plotting
-  several people's positions relative to one another, or letting someone
-  drag a point to set three percentages at once, is genuinely well served
-  by a triangle; this is not a reproduction of any commercial assessment's
-  triangle graphic, just an independently laid out geometry using this
-  tool's own colours.
+  (`createInteractiveTriangle`) use the same triangle for the same
+  reason — several relative positions, or a single draggable one.
 
 Across all of these, **colour mapping** is Drive = amber, Connection =
 purple, Clarity = teal (`CHART_COLORS` in `chart.js` — see "Brand" above
@@ -989,15 +990,12 @@ particular:
   are this product's own names, and results are described in terms of a
   continuous Focused/Dual-led/Balanced pattern (with its own 10/9/8-point
   thresholds) rather than a fixed set of named personality categories.
-- **Charts.** The primary results chart is a set of horizontal score
-  bars, not a triangle. The Priorities Under Pressure movement chart is a
-  three-lane visual with circle/diamond markers and a plain connecting
-  bar — deliberately not an arrow-and-triangle graphic. The multi-person
-  overlay, blind-spot reveal, and draggable input keep an original
-  triangle layout of their own design and colour scheme, used because
-  plotting several relative positions or setting a percentage split by
-  dragging is genuinely well served by that shape — not because it
-  reproduces any other assessment's graphic.
+- **Charts.** Every chart uses the same original triangle geometry, in
+  this tool's own colour scheme — not a reproduction of any commercial
+  assessment's graphic. The Priorities Under Pressure movement chart
+  deliberately still avoids an arrowhead: the two points are joined by a
+  plain connecting line and told apart by marker shape (circle vs.
+  diamond), so the shape itself doesn't imply "escalation" or "conflict."
 - **Language.** Narrative content avoids "conflict type"/"conflict style"
   framing throughout; the pressure feature is described as "Priorities
   Under Pressure" and "Degree of Change," not any third-party's
