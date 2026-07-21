@@ -9,32 +9,61 @@ the same scoring: a **communication guide** to working with each of the
 other results, a **team overlay**, and a **blind-spot (perception)
 exercise**.
 
-## Architecture: no server, no accounts, no install
+## Architecture: a static site with a small managed database behind it
 
-This is a **fully static site** — plain HTML, CSS and JavaScript, with no
-backend, no database, no build step, and nothing to install. Every page can
-be opened straight from a folder, or served by any plain web host.
+The site itself is still **plain HTML, CSS and JavaScript, with no build
+step, no framework, and nothing to install** — every page can still be
+opened straight from a folder, or served by any plain static host (this
+is deployed on GitHub Pages). What's changed is *where results end up*:
+this now also uses [Supabase](https://supabase.com) — a hosted Postgres
+database with a ready-made REST API and login system — as a small,
+managed backend, reached from the browser with plain `fetch()` calls (see
+`js/supabaseClient.js`). There's still no server of ours to run, patch or
+pay for beyond Supabase's own free tier; the "backend" is a database plus
+some security rules, not a custom application server.
 
-The team features (overlay and blind-spot exercise, plus the admin
-submissions view) need a way for several people's separate results to end
-up in one place. Instead of a shared server, this app uses a much simpler
-mechanism: the moment someone reaches their results screen, a small
-`.json` file (e.g. `result-alice.json`) **downloads to their device
-automatically** — no button click needed for that part, which removes the
-"I forgot to click save" gap. A **"Save again"** button stays on the page
-for re-saving under a different name, or in case a browser blocked the
-automatic download. Either way, downloading the file is only half the
-job: someone still has to actually hand it over — email it, or drop it
-into a shared folder (OneDrive, Dropbox, Google Drive, a network drive,
-whatever you already use) — before it can be loaded all at once on the
-team overlay, blind-spot reveal, or admin page. There is no step that
-sends it anywhere automatically beyond the person's own downloads; every
-file is read directly inside the browser using the File/FileReader API,
-on whichever computer opens it.
+**How a result gets saved.** The moment someone reaches their results
+screen, two things happen automatically, with no button click needed:
+a small `.json` file (e.g. `result-alice.json`) downloads to their device
+(a personal backup, and a fallback for anyone who wants to share results
+the old way), **and** their name, result and (if they entered one) team
+code are saved straight to the `submissions` table in the database. A
+**"Save again"** button stays on the results page for re-saving the file
+under a different name, or in case a browser blocked the automatic
+download. The database save is "best effort": if it fails (no internet,
+Supabase briefly down), the page says so plainly and the downloaded file
+still has everything needed to share the old, file-based way — nothing
+about this tool depends on the database being reachable to work.
 
-The solo reflection works exactly the same on its own — nothing about a
-person's answers leaves their browser unless they choose to save and share
-a result file.
+**Team codes.** Solo reflection, the team overlay and the blind-spot
+exercise all accept an optional **team code** — any short string a
+facilitator agrees with their group beforehand (e.g. `ATLAS7`). Entering
+the same code on the solo reflection and then on the team overlay/reveal
+step is what lets several people's results find each other automatically,
+without anyone collecting or emailing files, and without different teams
+seeing each other's data. That last part is enforced by the *database
+itself*, not just by this site's JavaScript: reads are only possible
+through two narrow Postgres functions that return rows matching an exact
+code (see "Database setup" below) — knowing the code is a real requirement
+to read that data back, not a UI convenience that can be bypassed by
+calling the API directly.
+
+**File-based loading still works everywhere it used to.** Nobody has to
+use a team code — the original file-download-and-load flow (save a
+`result-*.json`/`guesses-*.json` file, hand it over, load it on the team
+overlay/blind-spot/admin page) is still there on every page as a
+"or load from files instead" fallback, unchanged. This matters for anyone
+who'd rather not put identified results in a shared database at all, or
+for loading older files saved before the database existed.
+
+**Admin sign-in is now a real login.** `admin.html` used to be gated by a
+passphrase checked in this site's own JavaScript — a soft deterrent, not
+real security (anyone could view-source and read it). It's now gated by
+Supabase's own Auth service, checked against an admin account created in
+the Supabase dashboard, and once signed in it loads every submission
+across every team code straight from the database. See "Database setup"
+below for how to set this up, and "Admin: all submissions" for how the
+page itself works.
 
 ## Running it
 
@@ -63,28 +92,148 @@ Pages:
   including GitHub Pages.
 - `reflection.html` — the solo reflection.
 - `guide.html` — the communication guide ("Working with other colours").
-- `team.html` — load everyone's result files and see the team overlay.
-- `guess.html` — the blind-spot (perception) exercise: guessing, then reveal.
-- `admin.html` — passphrase-gated view of every loaded result file as a
-  plain table, with CSV and PDF export. Linked from a small badge in the
-  top-right corner of the home page's hero band, not one of the main
-  tiles. See "Admin: all submissions" below for how it works and its real
-  security limits.
+- `team.html` — enter a team code to load that team's results automatically,
+  or load result files by hand, and see the team overlay.
+- `guess.html` — the blind-spot (perception) exercise: guessing, then reveal
+  (by team code, or by hand).
+- `admin.html` — sign in with a real Supabase account to see every
+  submission across every team, with CSV and PDF export. Linked from a
+  small badge in the top-right corner of the home page's hero band, not
+  one of the main tiles. See "Admin: all submissions" below for how it
+  works, and "Database setup" for how the sign-in is configured.
+
+## Database setup
+
+This tool uses [Supabase](https://supabase.com)'s free tier as its
+database. You only need to do this once:
+
+1. **Create a free Supabase account and project** at supabase.com (signing
+   in with GitHub is the quickest option). Creating a project asks for a
+   name, a database password (store it somewhere safe — it's rarely
+   needed day-to-day) and a region.
+2. **Run the setup SQL** — open the project's SQL Editor and paste in the
+   script below, then click Run. It's written to be safe to run more than
+   once (it won't error or duplicate anything if some of it already
+   exists):
+
+   ```sql
+   -- 1. Submissions table (solo reflection results)
+   create table if not exists submissions (
+     id uuid default gen_random_uuid() primary key,
+     name text not null,
+     people numeric not null,
+     performance numeric not null,
+     process numeric not null,
+     category text not null,
+     created_at timestamptz default now()
+   );
+
+   alter table submissions add column if not exists team_code text;
+   alter table submissions enable row level security;
+
+   drop policy if exists "Anyone can submit a result" on submissions;
+   create policy "Anyone can submit a result"
+     on submissions for insert
+     to anon
+     with check (true);
+
+   drop policy if exists "Only signed-in admins can read results" on submissions;
+   create policy "Only signed-in admins can read results"
+     on submissions for select
+     to authenticated
+     using (true);
+
+   -- 2. Guesses table (blind-spot exercise)
+   create table if not exists guesses (
+     id uuid default gen_random_uuid() primary key,
+     team_code text,
+     guesser_name text not null,
+     target_name text not null,
+     people numeric not null,
+     performance numeric not null,
+     process numeric not null,
+     created_at timestamptz default now()
+   );
+
+   alter table guesses enable row level security;
+
+   drop policy if exists "Anyone can submit a guess" on guesses;
+   create policy "Anyone can submit a guess"
+     on guesses for insert
+     to anon
+     with check (true);
+
+   -- 3. Team-code-gated read functions -- the actual "only your own team
+   -- can see your team's data" gate, enforced by the database rather
+   -- than by this site's JavaScript. security definer means the function
+   -- can read the table even though the anon role has no direct select
+   -- grant on it above -- the only way to read rows back out is by
+   -- knowing the exact code to pass in.
+   create or replace function get_team_submissions(code text)
+   returns setof submissions
+   language sql
+   security definer
+   set search_path = public
+   as $$
+     select * from submissions where team_code = code;
+   $$;
+   grant execute on function get_team_submissions(text) to anon;
+
+   create or replace function get_team_guesses(code text)
+   returns setof guesses
+   language sql
+   security definer
+   set search_path = public
+   as $$
+     select * from guesses where team_code = code;
+   $$;
+   grant execute on function get_team_guesses(text) to anon;
+   ```
+
+3. **Create the admin account** — in the left sidebar, "Authentication" >
+   "Users" > "Add user". Set an email and password; this is what gets
+   typed into `admin.html`'s sign-in form, separate from your own
+   Supabase account login.
+4. **Copy two values into `js/supabaseClient.js`** — in the left sidebar,
+   "Project Settings" > "API Keys" gives you the **Publishable key**
+   (`sb_publishable_...`), and "Project Settings" > "Data API" gives you
+   the **API URL** (use everything before `/rest/v1/`, e.g.
+   `https://xxxx.supabase.co`). Both are already set as
+   `SUPABASE_URL`/`SUPABASE_PUBLISHABLE_KEY` at the top of that file for
+   this deployment — only change them if you spin up a different Supabase
+   project.
+
+   **Never put Supabase's "Secret key" (`sb_secret_...`, formerly called
+   `service_role`) anywhere in this codebase.** The publishable key is
+   designed to be public — it can only ever do what the Row Level
+   Security policies above allow. The secret key bypasses all of that and
+   must never appear in client-side code.
+
+If the database is ever unreachable (no internet, Supabase down, or this
+step hasn't been done yet), every page that talks to it fails soft: the
+solo reflection still downloads a result file and just notes the shared
+save didn't go through; the team overlay and blind-spot reveal fall back
+to their "load from files" option; the admin page shows a plain "couldn't
+reach the database" note instead of crashing.
 
 ## The five flows
 
 ### 1. Solo reflection
 
-Landing → privacy/consent → your name → ~30 questions → results (triangle
-chart, interpretation, strengths, overuse risks, communication tips, and a
-short "how others can work with you" section). Your name is asked up front
-(so your own results page and any file you export are clearly labelled) —
-there's no email step anywhere in this tool. The moment the results screen
-loads, a result file downloads to your device automatically (no click
-needed); a "Save again" button stays on the page if you want to re-save
-under a different name or the automatic download didn't fire. Either way,
-it's still just a file on your own device until someone actually hands it
-over for a team exercise — see "Data storage" below.
+Landing → privacy/consent → your name (plus an optional team code) → ~30
+questions → results (triangle chart, interpretation, strengths, overuse
+risks, communication tips, and a short "how others can work with you"
+section). Your name is asked up front (so your own results page and any
+file you export are clearly labelled) — there's no email step anywhere in
+this tool. The team code is only relevant if a facilitator gave you one
+for a team exercise; leave it blank for a purely personal reflection. The
+moment the results screen loads, two things happen automatically, no
+click needed: a result file downloads to your device (a personal backup
+and a fallback for sharing the old way), and your name, result and team
+code (if given) save straight to the shared database — see "Database
+setup" and "Data storage" below for what that means in practice. A "Save
+again" button stays on the page if you want to re-save the file under a
+different name, or if the automatic download didn't fire.
 
 ### 2. Communication guide ("Working with other colours")
 
@@ -115,9 +264,13 @@ how the content is put together. Has its own "Download as PDF" export.
 
 ### 3. Team overlay
 
-Each person completes the solo reflection on their own device and saves
-their result file. Once those files are collected in one shared folder,
-anyone opens `team.html`, selects all of them at once, and sees:
+Each person completes the solo reflection on their own device, entering a
+shared team code when asked for their name. Anyone opens `team.html`,
+types that same code under "Load your team by code," and everyone who
+used it appears on the overlay automatically — no files to collect. The
+older approach still works underneath, as an "Or load from files instead"
+option: each person saves and hands over their result file, and whoever's
+running the session loads them all at once. Either way you end up with:
 
 - everyone plotted as a labelled marker on one triangle, plus a "team
   average" marker and a full accessible data table underneath;
@@ -154,47 +307,45 @@ This section, plus the chart and data table, is included in this page's
 
 This is **named, not anonymous** — the privacy note on this page says so
 explicitly, and it's worth confirming your team is comfortable with that
-before collecting files.
+before using a shared team code or collecting files.
 
 ### 4. Blind-spot (perception) exercise
 
 On `guess.html`, one section lets each person privately guess — by
 dragging a point on an interactive triangle — where they think *they* sit,
-then where they think *every other named teammate* sits. At the end they
-save a small guesses file (e.g. `guesses-alice.json`) the same way as a
+then where they think *every other named teammate* sits. If the group is
+using a team code, entering it here saves each guess straight to the
+database, ready for the reveal step; either way, they can also save a
+guesses file (e.g. `guesses-alice.json`) at the end, the same way as a
 result file.
 
-Nobody needs a PIN or code to keep guesses hidden: the act of collecting
-files into a shared folder *is* the gate, since nobody can see anyone
-else's guesses until someone deliberately loads all the guesses-and-result
-files together on the second section of this page ("Reveal"). Once loaded,
-it shows, per person: their actual result (solid marker) plus every guess
+**Reveal** works the same two ways: type the team code to pull that
+team's results and guesses straight from the database, or load everyone's
+guesses-and-result files by hand if no code was used. Nobody needs a PIN
+to keep guesses hidden in the meantime — without a team code, the act of
+collecting files *is* the gate (nobody sees anyone else's guesses until
+someone deliberately loads them together); with a team code, the same
+team-code-gated database functions used by the team overlay mean only
+someone who knows the code can pull the data back out. Once revealed, it
+shows, per person: their actual result (solid marker) plus every guess
 made about them, including their own self-guess.
 
 ### 5. Admin: all submissions
 
-`admin.html` is the same idea as the team overlay — load a pile of
-`result-*.json` files at once — but instead of a triangle it's a plain,
-sortable-by-eye table: name, result, the three percentages, and when it
-was submitted. There's a "Download as CSV" button (for pulling into Excel
-or Google Sheets) alongside the usual "Download as PDF".
+`admin.html` shows every submission across every team code, straight from
+the database, as a plain sortable-by-eye table: name, result, the three
+percentages, team code, and when it was submitted. There's a "Download as
+CSV" button (for pulling into Excel or Google Sheets) alongside the usual
+"Download as PDF." An "Import older result files" section further down
+lets you fold in any `result-*.json` files saved before the database
+existed, so historical submissions aren't lost.
 
-It's behind a passphrase (`CONTENT.admin.passphrase` in `js/content.js`,
-default `changeme123` — change it before real use), and the page is only
-linked from a small badge in the top-right corner of the home page's hero
-band, not one of the main tiles or the nav.
-
-**Read this part properly:** the passphrase is a soft deterrent, not real
-security. It's checked entirely in this page's own JavaScript, which means
-it's sitting in plain text in a file anyone can open (view-source, or a
-browser's dev tools, on any website — nothing special needed). It stops
-this page from reading as an obvious, casual public link; it does **not**
-stop someone who knows how to look. Don't put anything behind it you'd
-be genuinely upset to see leak, and don't rely on it if these result files
-ever contain something more sensitive than a motivation-reflection
-category. Genuine access control — a real login that a server actually
-checks — needs a real backend, which is a much bigger step than anything
-else in this tool (see "Future phase" below).
+Signing in is a **real login** — checked by Supabase's own Auth service
+against an admin account you create yourself (see "Database setup"
+above), not a passphrase checked by this site's own JavaScript the way it
+used to be. The page is linked from a small badge in the top-right corner
+of the home page's hero band, not one of the main tiles or the nav. A
+"Sign out" button next to the page title ends the session.
 
 ## Brand (`css/styles.css` `:root`)
 
@@ -473,52 +624,60 @@ output (via a full print, not just eyeballing the on-screen page) —
 
 ## Data storage
 
-There is no central data store. Each person's browser only ever holds
-their own answers for the length of their own session. The one piece of
-local persistence is `js/aggregate.js`, which writes an anonymised
-`{ timestamp, percentages, category }` record (no name, email, or file
-contents) into that browser's own `localStorage`, to support a future
-"how does this compare to everyone else" aggregate view. See that file's
-comments for how to wire it to a real analytics endpoint later if useful.
+Every completed solo reflection is saved to the `submissions` table in the
+Supabase database described in "Database setup" above — name, the three
+percentages, the result category, an optional team code, and a timestamp.
+This happens automatically, whether or not a team code was entered; it's
+what makes `admin.html` show a live, complete list without anyone
+collecting files, and it's disclosed on the privacy/consent screen before
+anyone starts (`CONTENT.privacy.points`). Guesses from the blind-spot
+exercise save the same way, into the `guesses` table, when a team code is
+used.
 
-Result files and guesses files only exist as files people choose to save
-and share — there's nothing to back up or wipe centrally, and deleting the
-files from the shared folder after a workshop removes all record of that
-session. `admin.html` doesn't change this: it's another page that loads
-the same result files people already save, it doesn't introduce a new
-place those files get sent to.
+Nothing about *how the questions are answered* is stored beyond the final
+percentages — there's no record of individual question responses, only
+the computed result. The one piece of purely local, anonymised persistence
+is `js/aggregate.js`, which writes a `{ timestamp, percentages, category }`
+record (no name or team code) into that browser's own `localStorage`, to
+support a future "how does this compare to everyone else" aggregate view
+— unrelated to the Supabase tables above, and never synced anywhere.
+
+Result files and guesses files still exist too, as a personal backup and a
+fallback for anyone not using a team code — deleting them from a shared
+folder after a workshop only removes that copy, not the database record
+(if one was made). To delete a database record, do it directly in the
+Supabase dashboard's Table Editor.
 
 ## Admin editing
 
 Editing content means editing `js/content.js` directly — there's no
-login-gated admin UI for copy, and none is needed since there's no server
-to log into. (This is a different "admin" from `admin.html` above, which
-is about viewing participants' submitted results, not editing the tool's
-own wording.)
+in-browser admin UI for copy. (This is a different "admin" from
+`admin.html`, which is about viewing participants' submitted results, not
+editing the tool's own wording.)
 
 ## Privacy notes (read before using this with real teams)
 
-- **The solo reflection stays on the person's own device by default.**
-  They're asked for their name up front (so their own results page and any
-  file they export are clearly labelled). A result file now saves to their
-  own downloads automatically as soon as they reach their results — but it
-  still only ever goes to their own device; nothing leaves their browser or
-  reaches anyone else unless they (or someone else) actively hand that
-  downloaded file over, e.g. for a team exercise.
+- **Every solo reflection is saved to a shared database automatically**,
+  visible to whoever has admin sign-in — name, result and team code (if
+  given). This is disclosed up front on the privacy/consent screen before
+  anyone starts; make sure your team is genuinely comfortable with that
+  before rolling this out, not just aware it's in the small print.
 - **The team overlay and blind-spot exercise are named, not anonymous, by
-  design** — that's the point of the exercise. Anyone who receives the
-  shared folder of result/guesses files can see everyone's name alongside
-  their result. Make sure your team is comfortable with that before
+  design** — that's the point of the exercise. Anyone who knows a team's
+  code (or receives the shared folder of result/guesses files, for the
+  file-based fallback) can see everyone's name alongside their result.
+  Make sure your team is comfortable with that before sharing a code or
   collecting files, and see `CONTENT.team.privacyNote` for the wording
   shown on-screen.
-- **There's no login or access control on the shared folder** — that's
-  managed entirely by whatever folder-sharing tool your team already uses
-  (OneDrive, Dropbox, etc.), not by this app. Treat the files the same way
-  you'd treat any other document containing named personal reflections.
-- **`admin.html`'s passphrase is a soft deterrent, not real access
-  control** — see "Admin: all submissions" above. Anyone with the site's
-  URL and a moment in their browser's dev tools could read or bypass it.
-  Don't treat it as a genuine security boundary.
+- **Team codes are a real database-level gate, not just a UI filter** —
+  reading a team's data back out requires the exact code, enforced by the
+  Postgres functions in "Database setup," not by this site's JavaScript.
+  Treat a team code the same way you'd treat a shared meeting passcode:
+  memorable is fine, but don't post it somewhere public.
+- **Admin sign-in is a real login**, checked by Supabase's own servers
+  against an account you create yourself — a genuine security boundary,
+  unlike the old passphrase. It's still worth normal account hygiene
+  (a real password, not shared beyond whoever needs admin access).
 
 ## Future phase (not built here)
 

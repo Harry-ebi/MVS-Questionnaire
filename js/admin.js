@@ -1,15 +1,14 @@
 /**
  * admin.js
  * -----------------------------------------------------------------------
- * "All submissions" admin view — entirely local, no server, no accounts,
- * same as every other page in this tool. It reads the same result-*.json
- * files people already save from the solo reflection (the ones the team
- * overlay and blind-spot exercise also use) and shows them as a plain
- * table instead of plotted on a triangle.
- *
- * The passphrase gate below is a soft deterrent, not real security — see
- * the long comment above CONTENT.admin in content.js for why, and what a
- * genuine access-controlled version of this page would require instead.
+ * "All submissions" admin view. Sign-in is a REAL login, checked by
+ * Supabase's own Auth service (see js/supabaseClient.js) against an
+ * admin account created in the Supabase dashboard's Authentication >
+ * Users screen — not the old passphrase that used to be checked by this
+ * site's own JavaScript. Once signed in, every submission across every
+ * team code is fetched straight from the database (the same `submissions`
+ * table the solo reflection saves to); older result-*.json files from
+ * before the database existed can still be imported alongside it below.
  * -----------------------------------------------------------------------
  */
 
@@ -20,7 +19,7 @@
   const c = CONTENT.admin;
   const dimNames = CONTENT.results.dimensionNames;
 
-  const UNLOCK_KEY = "mvs_admin_unlocked_v1";
+  const SESSION_KEY = "mvs_admin_session_v1";
 
   function escapeHtml(str) {
     const div = document.createElement("div");
@@ -28,53 +27,75 @@
     return div.innerHTML;
   }
 
-  function isUnlocked() {
+  function getSession() {
     try {
-      return window.sessionStorage.getItem(UNLOCK_KEY) === "1";
+      const raw = window.sessionStorage.getItem(SESSION_KEY);
+      return raw ? JSON.parse(raw) : null;
     } catch (err) {
-      return false;
+      return null;
     }
   }
 
-  function setUnlocked() {
+  function setSession(session) {
     try {
-      window.sessionStorage.setItem(UNLOCK_KEY, "1");
+      window.sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
     } catch (err) {
-      // If sessionStorage isn't available, the passphrase form will just
-      // be shown again next time — not a big deal for a soft gate.
+      // If sessionStorage isn't available, the sign-in form will just be
+      // shown again next time — not a big deal.
     }
   }
 
-  function renderGate() {
+  function clearSession() {
+    try {
+      window.sessionStorage.removeItem(SESSION_KEY);
+    } catch (err) {
+      // Nothing to do.
+    }
+  }
+
+  function renderGate(errorMessage) {
     root.innerHTML = `
       <div class="mvs-screen">
         <p class="mvs-eyebrow">${CONTENT.meta.shortName}</p>
         <a href="index.html" class="mvs-meta-line">&larr; Back to home</a>
-        <h1>${escapeHtml(c.passphraseHeading)}</h1>
-        <p class="mvs-lead">${escapeHtml(c.passphraseBody)}</p>
+        <h1>${escapeHtml(c.loginHeading)}</h1>
+        <p class="mvs-lead">${escapeHtml(c.loginBody)}</p>
         <form id="mvs-admin-gate-form" novalidate>
-          <label class="mvs-field-label" for="mvs-admin-passphrase">${escapeHtml(c.passphraseLabel)}</label>
-          <input type="password" id="mvs-admin-passphrase" class="mvs-text-input" placeholder="${escapeHtml(
-            c.passphrasePlaceholder
-          )}" autocomplete="off" />
+          <label class="mvs-field-label" for="mvs-admin-email">${escapeHtml(c.emailLabel)}</label>
+          <input type="email" id="mvs-admin-email" class="mvs-text-input" placeholder="${escapeHtml(
+            c.emailPlaceholder
+          )}" autocomplete="username" />
+          <label class="mvs-field-label" for="mvs-admin-password">${escapeHtml(c.passwordLabel)}</label>
+          <input type="password" id="mvs-admin-password" class="mvs-text-input" placeholder="${escapeHtml(
+            c.passwordPlaceholder
+          )}" autocomplete="current-password" />
           <p class="mvs-note" id="mvs-admin-gate-error" hidden></p>
-          <button type="submit" class="mvs-btn mvs-btn--primary">${escapeHtml(c.passphraseCta)}</button>
+          <button type="submit" class="mvs-btn mvs-btn--primary">${escapeHtml(c.loginCta)}</button>
         </form>
-        <p class="mvs-note" style="margin-top:16px;">${escapeHtml(c.securityNote)}</p>
       </div>
     `;
 
-    document.getElementById("mvs-admin-gate-form").addEventListener("submit", (e) => {
+    const errorNote = document.getElementById("mvs-admin-gate-error");
+    if (errorMessage) {
+      errorNote.hidden = false;
+      errorNote.textContent = errorMessage;
+    }
+
+    document.getElementById("mvs-admin-gate-form").addEventListener("submit", async (e) => {
       e.preventDefault();
-      const input = document.getElementById("mvs-admin-passphrase");
-      const errorNote = document.getElementById("mvs-admin-gate-error");
-      if (input.value === c.passphrase) {
-        setUnlocked();
-        renderAdmin([]);
+      const email = document.getElementById("mvs-admin-email").value.trim();
+      const password = document.getElementById("mvs-admin-password").value;
+      if (typeof SupabaseClient === "undefined") {
+        renderGate("Couldn't reach the shared database just now — try again in a moment.");
         return;
       }
-      errorNote.hidden = false;
-      errorNote.textContent = c.passphraseError;
+      const session = await SupabaseClient.signIn(email, password);
+      if (!session || !session.access_token) {
+        renderGate(c.loginError);
+        return;
+      }
+      setSession(session);
+      loadAndRenderAdmin(session.access_token);
     });
   }
 
@@ -107,7 +128,7 @@
   }
 
   function toCsv(records) {
-    const header = [c.colName, c.colResult, c.colPeople, c.colPerformance, c.colProcess, c.colSubmitted];
+    const header = [c.colName, c.colResult, c.colPeople, c.colPerformance, c.colProcess, c.colTeamCode, c.colSubmitted];
     const escapeCsv = (v) => `"${String(v).replace(/"/g, '""')}"`;
     const rows = records.map((r) => [
       r.name,
@@ -115,6 +136,7 @@
       r.percentages.people,
       r.percentages.performance,
       r.percentages.process,
+      r.teamCode || "",
       r.exportedAt || "",
     ]);
     return [header, ...rows].map((row) => row.map(escapeCsv).join(",")).join("\r\n");
@@ -154,6 +176,7 @@
             <td>${escapeHtml(r.percentages.people)}%</td>
             <td>${escapeHtml(r.percentages.performance)}%</td>
             <td>${escapeHtml(r.percentages.process)}%</td>
+            <td>${escapeHtml(r.teamCode || "—")}</td>
             <td>${escapeHtml(formatTimestamp(r.exportedAt))}</td>
           </tr>
         `;
@@ -171,6 +194,7 @@
               <th scope="col">${escapeHtml(c.colPeople)}</th>
               <th scope="col">${escapeHtml(c.colPerformance)}</th>
               <th scope="col">${escapeHtml(c.colProcess)}</th>
+              <th scope="col">${escapeHtml(c.colTeamCode)}</th>
               <th scope="col">${escapeHtml(c.colSubmitted)}</th>
             </tr>
           </thead>
@@ -182,7 +206,44 @@
     `;
   }
 
-  function renderAdmin(initialRecords) {
+  /**
+   * Fetch every submission from the database using a signed-in admin's
+   * access token, then hand the mapped records to renderAdmin(). Shows a
+   * brief loading state first since this is a network round trip (unlike
+   * the old file-drop version, which was instant).
+   */
+  async function loadAndRenderAdmin(accessToken) {
+    root.innerHTML = `
+      <div class="mvs-screen">
+        <p class="mvs-eyebrow">${CONTENT.meta.shortName}</p>
+        <a href="index.html" class="mvs-meta-line">&larr; Back to home</a>
+        <h1>${escapeHtml(c.pageTitle)}</h1>
+        <p class="mvs-lead">…</p>
+      </div>
+    `;
+
+    if (typeof SupabaseClient === "undefined") {
+      renderAdmin([], true);
+      return;
+    }
+
+    const result = await SupabaseClient.selectAll("submissions", accessToken);
+    if (!result.ok) {
+      renderAdmin([], true);
+      return;
+    }
+
+    const records = result.data.map((row) => ({
+      name: row.name,
+      percentages: { people: row.people, performance: row.performance, process: row.process },
+      category: row.category,
+      teamCode: row.team_code,
+      exportedAt: row.created_at,
+    }));
+    renderAdmin(records, false);
+  }
+
+  function renderAdmin(initialRecords, loadError) {
     let records = initialRecords.slice();
 
     function paint(skipped) {
@@ -192,19 +253,30 @@
               .map((n) => escapeHtml(c.invalidFileNote(n)))
               .join("<br>")}</p></div>`
           : "";
+      const loadErrorHtml = loadError
+        ? `<div class="mvs-callout mvs-print-hide"><p>${escapeHtml(c.tableLoadError)}</p></div>`
+        : "";
 
       root.innerHTML = `
         <div class="mvs-screen">
           <p class="mvs-eyebrow">${CONTENT.meta.shortName}</p>
           <a href="index.html" class="mvs-meta-line mvs-print-hide">&larr; Back to home</a>
-          <h1>${escapeHtml(c.pageTitle)}</h1>
+          <div class="mvs-btn-row mvs-print-hide" style="justify-content:space-between;align-items:center;margin-bottom:0;">
+            <h1 style="margin:0;">${escapeHtml(c.pageTitle)}</h1>
+            <button type="button" class="mvs-btn mvs-btn--ghost" id="mvs-admin-sign-out">${escapeHtml(
+              c.signOutCta
+            )}</button>
+          </div>
           <p class="mvs-lead mvs-print-hide">${escapeHtml(c.intro)}</p>
+
+          ${loadErrorHtml}
 
           <section class="mvs-section mvs-print-hide">
             <h2 class="mvs-section-title">${escapeHtml(c.loadHeading)}</h2>
+            <p class="mvs-note">${escapeHtml(c.loadIntro)}</p>
             <div class="mvs-dropzone" id="mvs-admin-dropzone">
               <input type="file" id="mvs-admin-file-input" accept="application/json,.json" multiple style="display:none" />
-              <button type="button" class="mvs-btn mvs-btn--primary" id="mvs-admin-choose-btn">${escapeHtml(
+              <button type="button" class="mvs-btn mvs-btn--ghost" id="mvs-admin-choose-btn">${escapeHtml(
                 c.loadButtonLabel
               )}</button>
               <p class="mvs-note">${escapeHtml(c.loadHint)}</p>
@@ -239,6 +311,11 @@
 
       wireFileInput();
 
+      document.getElementById("mvs-admin-sign-out").addEventListener("click", () => {
+        clearSession();
+        renderGate();
+      });
+
       if (records.length) {
         document.getElementById("mvs-admin-export-csv").addEventListener("click", () => downloadCsv(records));
         document.getElementById("mvs-admin-export-pdf").addEventListener("click", () => window.print());
@@ -266,6 +343,7 @@
             name: data.name,
             percentages: data.percentages,
             category: data.category,
+            teamCode: data.team_code || null,
             exportedAt: data.exportedAt,
           });
         } else {
@@ -303,8 +381,9 @@
     paint([]);
   }
 
-  if (isUnlocked()) {
-    renderAdmin([]);
+  const existingSession = getSession();
+  if (existingSession && existingSession.access_token) {
+    loadAndRenderAdmin(existingSession.access_token);
   } else {
     renderGate();
   }

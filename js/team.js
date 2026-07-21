@@ -206,6 +206,69 @@
     });
   }
 
+  // ------------------------------------------------------------------
+  // Team-code load (primary path) — fetches straight from the shared
+  // database via a Postgres function that only returns rows matching the
+  // exact code supplied (see README.md "Database setup"). No files to
+  // collect; this is what makes the tool "save automatically" end to end.
+  // ------------------------------------------------------------------
+
+  function renderCodeLoadSection() {
+    return `
+      <section class="mvs-section mvs-print-hide">
+        <h2 class="mvs-section-title">${escapeHtml(c.codeHeading)}</h2>
+        <form id="mvs-code-form" novalidate>
+          <label class="mvs-field-label" for="mvs-team-code-input">${escapeHtml(c.codeLabel)}</label>
+          <input type="text" id="mvs-team-code-input" class="mvs-text-input" placeholder="${escapeHtml(
+            c.codePlaceholder
+          )}" autocomplete="off" />
+          <p class="mvs-note" id="mvs-code-status" hidden></p>
+          <button type="submit" class="mvs-btn mvs-btn--primary">${escapeHtml(c.codeCta)}</button>
+        </form>
+      </section>
+    `;
+  }
+
+  function wireCodeForm() {
+    const form = document.getElementById("mvs-code-form");
+    if (!form) return;
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const input = document.getElementById("mvs-team-code-input");
+      const status = document.getElementById("mvs-code-status");
+      const code = input.value.trim();
+      if (!code) {
+        status.hidden = false;
+        status.textContent = c.codeEmptyError;
+        return;
+      }
+      status.hidden = false;
+      status.textContent = "…";
+
+      if (typeof SupabaseClient === "undefined") {
+        status.textContent = c.codeErrorNote;
+        return;
+      }
+      const result = await SupabaseClient.rpc("get_team_submissions", { code });
+      if (!result.ok) {
+        status.hidden = false;
+        status.textContent = c.codeErrorNote;
+        return;
+      }
+      if (!result.data.length) {
+        status.hidden = false;
+        status.textContent = c.codeNoResultsNote(code);
+        return;
+      }
+      const participants = result.data.map((row) => ({
+        name: row.name,
+        percentages: { people: row.people, performance: row.performance, process: row.process },
+        category: row.category,
+      }));
+      renderOverlay(participants, []);
+    });
+  }
+
   async function handleFiles(fileList) {
     const files = Array.from(fileList || []);
     if (!files.length) return;
@@ -246,11 +309,14 @@
         <h1>${escapeHtml(c.title)}</h1>
         <a href="index.html" class="mvs-meta-line mvs-print-hide">&larr; Back to home</a>
 
+        ${renderCodeLoadSection()}
+
         <section class="mvs-section mvs-print-hide">
           <h2 class="mvs-section-title">${escapeHtml(c.loadHeading)}</h2>
+          <p class="mvs-note">${escapeHtml(c.loadIntro)}</p>
           <div class="mvs-dropzone" id="mvs-dropzone">
             <input type="file" id="mvs-file-input" accept="application/json,.json" multiple style="display:none" />
-            <button type="button" class="mvs-btn mvs-btn--primary" id="mvs-choose-files-btn">${escapeHtml(
+            <button type="button" class="mvs-btn mvs-btn--ghost" id="mvs-choose-files-btn">${escapeHtml(
               c.loadButtonLabel
             )}</button>
             <p class="mvs-note">${escapeHtml(c.loadHint)}</p>
@@ -298,6 +364,7 @@
       if (exportBtn) exportBtn.addEventListener("click", () => window.print());
     }
 
+    wireCodeForm();
     wireFileInput();
   }
 
@@ -340,11 +407,14 @@
           </ol>
         </section>
 
+        ${renderCodeLoadSection()}
+
         <section class="mvs-section">
           <h2 class="mvs-section-title">${escapeHtml(c.loadHeading)}</h2>
+          <p class="mvs-note">${escapeHtml(c.loadIntro)}</p>
           <div class="mvs-dropzone" id="mvs-dropzone">
             <input type="file" id="mvs-file-input" accept="application/json,.json" multiple style="display:none" />
-            <button type="button" class="mvs-btn mvs-btn--primary" id="mvs-choose-files-btn">${escapeHtml(
+            <button type="button" class="mvs-btn mvs-btn--ghost" id="mvs-choose-files-btn">${escapeHtml(
               c.loadButtonLabel
             )}</button>
             <p class="mvs-note">${escapeHtml(c.loadHint)}</p>
@@ -360,6 +430,7 @@
         ${renderTeamAnalysisSection([])}
       </div>
     `;
+    wireCodeForm();
     wireFileInput();
   }
 

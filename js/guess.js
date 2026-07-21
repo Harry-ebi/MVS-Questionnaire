@@ -89,6 +89,10 @@
         <div id="mvs-who-are-you-wrap" hidden>
           <label class="mvs-field-label" for="mvs-who-are-you">${escapeHtml(c.yourNameLabel)}</label>
           <select id="mvs-who-are-you" class="mvs-text-input"></select>
+          <label class="mvs-field-label" for="mvs-guess-team-code">${escapeHtml(c.guessCodeLabel)}</label>
+          <input type="text" id="mvs-guess-team-code" class="mvs-text-input" placeholder="${escapeHtml(
+            c.guessCodePlaceholder
+          )}" autocomplete="off" />
         </div>
         <button type="button" class="mvs-btn mvs-btn--ghost" id="mvs-parse-roster-btn">Continue</button>
         <button type="submit" class="mvs-btn mvs-btn--primary" id="mvs-start-guessing-btn" hidden>${escapeHtml(
@@ -119,11 +123,12 @@
       e.preventDefault();
       const roster = parseRoster(rosterInput.value);
       const me = whoSelect.value;
-      startGuessingFlow(container, roster, me);
+      const teamCode = document.getElementById("mvs-guess-team-code").value.trim();
+      startGuessingFlow(container, roster, me, teamCode);
     });
   }
 
-  function startGuessingFlow(container, roster, me) {
+  function startGuessingFlow(container, roster, me, teamCode) {
     const targets = [me, ...roster.filter((n) => n !== me)];
     let index = 0;
     const collected = []; // { target, percentages }
@@ -174,11 +179,21 @@
       container.innerHTML = `
         <h2 class="mvs-section-title">${escapeHtml(c.allDoneHeading)}</h2>
         <p class="mvs-lead">${escapeHtml(c.allDoneBody)}</p>
+        <p class="mvs-note" id="mvs-cloud-save-guesses-note" hidden></p>
         <button type="button" class="mvs-btn mvs-btn--primary" id="mvs-download-guesses">${escapeHtml(
           c.saveGuessFileCta
         )}</button>
         <p class="mvs-note" id="mvs-download-guesses-status" hidden></p>
       `;
+
+      // Best-effort save to the shared database, same "never block the
+      // screen" spirit as the solo reflection's auto-save. Only happens
+      // when a team code was given — without one there's no team for
+      // these guesses to join, so the file below is the only copy.
+      if (teamCode) {
+        saveGuessesToCloud(teamCode, me, collected);
+      }
+
       document.getElementById("mvs-download-guesses").addEventListener("click", () => {
         const payload = {
           type: "wow-guesses",
@@ -197,6 +212,36 @@
     renderStep();
   }
 
+  /**
+   * Best-effort: insert one row per guess into the shared `guesses`
+   * table. Never throws or blocks the page — see supabaseClient.js.
+   */
+  async function saveGuessesToCloud(teamCode, guesserName, collected) {
+    const note = document.getElementById("mvs-cloud-save-guesses-note");
+    if (typeof SupabaseClient === "undefined") {
+      if (note) {
+        note.hidden = false;
+        note.textContent = c.cloudSaveFailNote;
+      }
+      return;
+    }
+    const results = await Promise.all(
+      collected.map((g) =>
+        SupabaseClient.insert("guesses", {
+          team_code: teamCode,
+          guesser_name: guesserName,
+          target_name: g.target,
+          people: g.percentages.people,
+          performance: g.percentages.performance,
+          process: g.percentages.process,
+        })
+      )
+    );
+    if (!note) return;
+    note.hidden = false;
+    note.textContent = results.every(Boolean) ? c.cloudSaveOkNote(teamCode) : c.cloudSaveFailNote;
+  }
+
   // ------------------------------------------------------------------
   // "Reveal" section
   // ------------------------------------------------------------------
@@ -208,10 +253,22 @@
         <ol class="mvs-list" style="padding-left:20px;">
           ${c.howItWorksRevealSteps.map((s) => `<li>${escapeHtml(s)}</li>`).join("")}
         </ol>
+
+        <h3 class="mvs-subheading">${escapeHtml(c.revealCodeHeading)}</h3>
+        <form id="mvs-reveal-code-form" novalidate>
+          <label class="mvs-field-label" for="mvs-reveal-code-input">${escapeHtml(c.revealCodeLabel)}</label>
+          <input type="text" id="mvs-reveal-code-input" class="mvs-text-input" placeholder="${escapeHtml(
+            c.revealCodePlaceholder
+          )}" autocomplete="off" />
+          <p class="mvs-note" id="mvs-reveal-code-status" hidden></p>
+          <button type="submit" class="mvs-btn mvs-btn--primary">${escapeHtml(c.revealCodeCta)}</button>
+        </form>
+
+        <h3 class="mvs-subheading">${escapeHtml(c.loadFilesHeading)}</h3>
         <p class="mvs-lead">${escapeHtml(c.revealIntro)}</p>
         <div class="mvs-dropzone" id="mvs-reveal-dropzone">
           <input type="file" id="mvs-reveal-file-input" accept="application/json,.json" multiple style="display:none" />
-          <button type="button" class="mvs-btn mvs-btn--primary" id="mvs-reveal-choose-btn">Choose all files (results + guesses)…</button>
+          <button type="button" class="mvs-btn mvs-btn--ghost" id="mvs-reveal-choose-btn">Choose all files (results + guesses)…</button>
           <p class="mvs-note">Select every result-*.json and guesses-*.json file at once (hold Ctrl/Cmd to multi-select).</p>
           <p class="mvs-note">or drag files here</p>
         </div>
@@ -219,6 +276,21 @@
       <div id="mvs-reveal-warnings" class="mvs-print-hide"></div>
       <div id="mvs-reveal-output"></div>
     `;
+
+    document.getElementById("mvs-reveal-code-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const input = document.getElementById("mvs-reveal-code-input");
+      const status = document.getElementById("mvs-reveal-code-status");
+      const code = input.value.trim();
+      if (!code) {
+        status.hidden = false;
+        status.textContent = c.revealCodeEmptyError;
+        return;
+      }
+      status.hidden = false;
+      status.textContent = "…";
+      await handleRevealByCode(code, status);
+    });
 
     const input = document.getElementById("mvs-reveal-file-input");
     const chooseBtn = document.getElementById("mvs-reveal-choose-btn");
@@ -241,6 +313,40 @@
       dropzone.classList.remove("mvs-dropzone--active");
       handleRevealFiles(e.dataTransfer.files);
     });
+  }
+
+  async function handleRevealByCode(code, status) {
+    if (typeof SupabaseClient === "undefined") {
+      status.hidden = false;
+      status.textContent = c.revealCodeErrorNote;
+      return;
+    }
+    const [submissionsResult, guessesResult] = await Promise.all([
+      SupabaseClient.rpc("get_team_submissions", { code }),
+      SupabaseClient.rpc("get_team_guesses", { code }),
+    ]);
+    if (!submissionsResult.ok || !guessesResult.ok) {
+      status.hidden = false;
+      status.textContent = c.revealCodeErrorNote;
+      return;
+    }
+    if (!submissionsResult.data.length && !guessesResult.data.length) {
+      status.hidden = false;
+      status.textContent = c.revealCodeNoResultsNote(code);
+      return;
+    }
+    status.hidden = true;
+    const results = submissionsResult.data.map((row) => ({
+      name: row.name,
+      percentages: { people: row.people, performance: row.performance, process: row.process },
+      category: row.category,
+    }));
+    const guesses = guessesResult.data.map((row) => ({
+      guesser: row.guesser_name,
+      target: row.target_name,
+      percentages: { people: row.people, performance: row.performance, process: row.process },
+    }));
+    renderRevealOutput(results, guesses);
   }
 
   async function handleRevealFiles(fileList) {

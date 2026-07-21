@@ -101,47 +101,43 @@ const CONTENT = {
    * ------------------------------------------------------------------
    * Admin: all submissions
    * ------------------------------------------------------------------
-   * A plain-English heads-up: `passphrase` below is stored and checked
-   * in this file, in the clear — anyone who opens this page's source
-   * (View Source / browser dev tools, which anyone can do on any
-   * website) can read it. It is NOT real security. Its only job is to
-   * stop this page reading as an obvious, casual, public link — the
-   * same "you'd have to know to look" logic already used by the
-   * blind-spot exercise (see guess.html's own notes). If you need
-   * genuine access control, this static-site approach isn't it — that
-   * would mean a real backend with server-side login, which is a much
-   * bigger undertaking than anything else in this tool.
-   *
-   * Change the passphrase any time by editing the line below and
-   * re-uploading this file to your host.
+   * Sign-in here is a REAL login, checked by Supabase's own Auth service
+   * (see js/supabaseClient.js and js/admin.js) — not the old passphrase
+   * that used to be checked by this site's own JavaScript. The admin
+   * account itself is created in the Supabase dashboard (Authentication
+   * > Users), not anywhere in this codebase, so there's nothing sensitive
+   * to protect in this file any more.
    * ------------------------------------------------------------------
    */
   admin: {
     pageTitle: "Admin: all submissions",
     intro:
-      "Load everyone's saved result files at once to see them together as a table — the same result-*.json files used by the team overlay and blind-spot exercise, just shown as a plain list here instead of plotted on a triangle.",
-    passphrase: "changeme123",
-    passphraseHeading: "Admin access",
-    passphraseBody:
-      "This isn't public — please don't share this link or passphrase outside the people who should see everyone's submissions.",
-    passphraseLabel: "Passphrase",
-    passphrasePlaceholder: "Enter the admin passphrase",
-    passphraseCta: "View submissions",
-    passphraseError: "That's not right. If you've forgotten it, it's stored in plain text in js/content.js (CONTENT.admin.passphrase) — open that file to check or change it.",
-    securityNote:
-      "Heads up: this passphrase is stored in this site's own code, so it only keeps out casual visitors, not anyone who knows how to view a page's source. Don't use it to gate anything you need real security for.",
-    loadHeading: "Load result files",
+      "Every result anyone has saved — across every team code — shown together as a table. Sign in with the admin account set up in Supabase to see it.",
+    loginHeading: "Admin sign-in",
+    loginBody: "Sign in with the admin email and password set up for this tool.",
+    emailLabel: "Email",
+    emailPlaceholder: "you@example.com",
+    passwordLabel: "Password",
+    passwordPlaceholder: "Enter your password",
+    loginCta: "Sign in",
+    loginError: "That email or password wasn't right — double-check them and try again.",
+    signOutCta: "Sign out",
+    loadHeading: "Import older result files (optional)",
+    loadIntro:
+      "Submissions saved before the database was set up won't be in the table above automatically — load their result-*.json files here to add them in.",
     loadButtonLabel: "Choose result files…",
     loadHint: "Select all the result-*.json files at once (hold Ctrl/Cmd to multi-select).",
     invalidFileNote: (fileName) => `Skipped "${fileName}" — it doesn't look like a Ways of Working result file.`,
     tableHeading: "Submissions",
-    tableEmpty: "No files loaded yet — choose everyone's result files above.",
-    tableCountLabel: (n) => `${n} submission${n === 1 ? "" : "s"} loaded`,
+    tableEmpty: "No submissions yet.",
+    tableLoadError: "Couldn't reach the shared database just now — try refreshing the page in a moment.",
+    tableCountLabel: (n) => `${n} submission${n === 1 ? "" : "s"}`,
     colName: "Name",
     colResult: "Result",
     colPeople: "People",
     colPerformance: "Performance",
     colProcess: "Process",
+    colTeamCode: "Team code",
     colSubmitted: "Submitted",
     exportCsvCta: "Download as CSV",
     exportCta: "Download as PDF",
@@ -151,19 +147,30 @@ const CONTENT = {
   team: {
     title: "Team overlay",
     intro:
-      "No accounts or shared codes needed. Each person completes the solo reflection on their own device and saves a small result file. Once you've collected everyone's files in one place (a shared folder works well), load them all here to see the team overlaid on one triangle.",
+      "Each person completes the solo reflection on their own device and enters a shared team code when asked for their name. Come back here, type that same code, and everyone who used it appears on the overlay automatically — no files to collect.",
     howItWorksHeading: "How to run this with your team",
     howItWorksSteps: [
-      "Send everyone the solo reflection page (index.html) and ask them to complete it.",
-      "On their results screen, ask them to type their name and click “Save result file” — this downloads a small file like result-alice.json.",
-      "Have everyone put their file in one shared folder (OneDrive, Dropbox, Google Drive, a network drive — whatever you already use), or just email them to you.",
-      "Come back to this page and load all of those files at once using the button below.",
+      "Agree a short team code with your group beforehand — anything memorable, e.g. ATLAS7.",
+      "Send everyone the solo reflection page (index.html) and ask them to complete it, entering that code when asked for their name.",
+      "Come back to this page, type the same code below, and click “Load team” — everyone who used it appears on the overlay automatically.",
+      "Didn't use a team code, or prefer the old way? Everyone can still save and share a result file instead — see “Load from files” further down.",
     ],
-    loadHeading: "Load everyone's result files",
+    codeHeading: "Load your team by code",
+    codeLabel: "Team code",
+    codePlaceholder: "e.g. ATLAS7",
+    codeCta: "Load team",
+    codeEmptyError: "Type the team code your facilitator shared with you.",
+    codeErrorNote:
+      "Couldn't reach the shared database just now — try again in a moment, or use “Load from files” below instead.",
+    codeNoResultsNote: (code) =>
+      `No results found yet for team code "${code}". Double-check the code, or ask your teammates to make sure they entered it when they saved their result.`,
+    loadHeading: "Or load from files instead",
+    loadIntro:
+      "Prefer not to use a team code, or working with older result files? Load everyone's saved result-*.json files here the same way as before.",
     loadButtonLabel: "Choose result files…",
     loadHint: "Select all the result-*.json files at once (hold Ctrl/Cmd to multi-select).",
     overlayHeading: "Team overlay",
-    overlayEmpty: "No files loaded yet — choose everyone's result files above to see the overlay.",
+    overlayEmpty: "No results loaded yet — enter a team code above, or load result files below, to see the overlay.",
     privacyNote:
       "Everyone whose file you load here can see everyone else's name and result in this overlay, once you show it to them. Make sure your team is comfortable with that before collecting these files — nothing is shared beyond your own browser unless someone chooses to save and hand over a result file. Nothing is uploaded anywhere by this page — the files are only read inside your own browser.",
     invalidFileNote: (fileName) => `Skipped "${fileName}" — it doesn't look like a Ways of Working result file.`,
@@ -202,23 +209,26 @@ const CONTENT = {
   guessExercise: {
     title: "Blind-spot exercise",
     intro:
-      "Before anyone sees real results, each team member guesses where they think they and every teammate sit on the triangle. No accounts or shared codes — guesses and results are shared as small files, the same way as the team overlay.",
+      "Before anyone sees real results, each team member guesses where they think they and every teammate sit on the triangle. Enter the same team code your group used for the solo reflection to save and reveal guesses automatically — or share files by hand the old way if you'd rather.",
     howItWorksHeading: "How to run this with your team",
     howItWorksGuessSteps: [
       "Open the “Enter your guesses” section below on your own device.",
       "Type the full list of names taking part (including yourself), then pick which one is you.",
+      "If your group is using a team code, enter the same one used on the solo reflection — this saves your guesses automatically, ready for the reveal step.",
       "Place a guess for yourself, then for every teammate, by tapping/dragging on the triangle.",
-      "Save your guesses file at the end and add it to the shared folder — alongside everyone's real result files from the solo reflection.",
+      "No team code? You can still save a guesses file at the end and add it to your shared folder, alongside everyone's real result files.",
     ],
     howItWorksRevealSteps: [
-      "Once everyone has saved both a result file (from the solo reflection) and a guesses file, open the “Reveal” section below.",
-      "Load all the guesses files and all the result files at once.",
-      "This page matches them up by name and shows, for each person, their actual result next to everyone's guesses about them.",
+      "Once everyone has entered their guesses (and completed the solo reflection) using the same team code, open the “Reveal” section below and type that code in.",
+      "No team code in use? Load everyone's saved guesses files and result files at once instead.",
+      "This page matches everything up by name and shows, for each person, their actual result next to everyone's guesses about them.",
     ],
     guessSectionHeading: "Enter your guesses",
     rosterLabel: "Everyone taking part (one name per line, including you)",
     rosterPlaceholder: "Alice\nBob\nPriya\nSam\nJordan",
     yourNameLabel: "Which one is you?",
+    guessCodeLabel: "Team code (optional)",
+    guessCodePlaceholder: "e.g. ATLAS7 — leave blank to only save a file",
     startGuessingCta: "Start guessing",
     guessSelfIntro: "First, place where you think you sit:",
     guessOtherIntro: (name) => `Now place where you think ${name} sits:`,
@@ -226,10 +236,24 @@ const CONTENT = {
     allDoneHeading: "All your guesses are in",
     allDoneBody:
       "Save your guesses file below and add it to your team's shared folder, along with your real result file from the solo reflection.",
+    cloudSaveOkNote: (teamCode) =>
+      `Your guesses have also been saved automatically under team code "${teamCode}" — they'll show up on the reveal step once results are ready, no file needed.`,
+    cloudSaveFailNote:
+      "Couldn't reach the shared database just now, so these guesses haven't saved automatically. The file below still has everything — hand it over the old way if this keeps happening.",
     saveGuessFileCta: "Save guesses file",
     revealSectionHeading: "Reveal: guesses vs. reality",
+    revealCodeHeading: "Reveal by team code",
+    revealCodeLabel: "Team code",
+    revealCodePlaceholder: "e.g. ATLAS7",
+    revealCodeCta: "Reveal",
+    revealCodeEmptyError: "Type the team code your facilitator shared with you.",
+    revealCodeErrorNote:
+      "Couldn't reach the shared database just now — try again in a moment, or use the file-based option below instead.",
+    revealCodeNoResultsNote: (code) =>
+      `Nothing found yet for team code "${code}" — check the code, or make sure your teammates entered it when saving their guesses and results.`,
+    loadFilesHeading: "Or load from files instead",
     revealIntro:
-      "Load everyone's guesses files and everyone's real result files (from the solo reflection) to see how perception compared to reality. This only happens in your own browser — nothing is uploaded.",
+      "Prefer not to use a team code, or working with older files? Load everyone's saved guesses files and everyone's real result files (from the solo reflection) here to see how perception compared to reality. This only happens in your own browser — nothing is uploaded.",
     loadGuessesLabel: "Choose guesses files…",
     loadResultsLabel: "Choose result files…",
     revealCta: "Reveal",
@@ -264,8 +288,9 @@ const CONTENT = {
     points: [
       "Your answers are used only to calculate your own result, shown to you at the end.",
       "You'll be asked for your name next, so your own result is clearly yours — no email address is ever asked for.",
-      "When you reach your results, a small file with your name and result will download to your device automatically — this stays on your own computer and isn't sent anywhere unless you (or someone else) actively choose to share it, e.g. for a team exercise.",
-      "We may store an anonymised, aggregated version of results (percentage splits only, with no name or other identifying detail) to help us understand overall patterns and improve this tool. Anonymised data cannot be traced back to you.",
+      "When you reach your results, a small file with your name and result downloads to your device automatically, and your name and result are also saved to this tool's shared database at the same time — visible to whoever administers this tool for your organisation.",
+      "If you enter a team code (optional, only relevant for a team exercise), your name and result also become visible — alongside your teammates' — to anyone who loads that same code on the team overlay or blind-spot exercise. Leave it blank if you're only doing this for yourself.",
+      "We may also store an anonymised, aggregated version of results (percentage splits only, with no name or other identifying detail) separately, to help us understand overall patterns and improve this tool. Anonymised data cannot be traced back to you.",
       "You can stop at any point before submitting your answers without anything being saved.",
     ],
     consentLabel:
@@ -280,6 +305,10 @@ const CONTENT = {
     label: "Your name",
     placeholder: "e.g. Alex Smith",
     errorNote: "Please type your name to continue.",
+    teamCodeLabel: "Team code (optional)",
+    teamCodeBody:
+      "Only fill this in if a facilitator gave you one for a team exercise — it lets your result join that team's shared overlay automatically. Leave it blank for a purely personal reflection.",
+    teamCodePlaceholder: "e.g. ATLAS7 — leave blank if you don't have one",
     continueCta: "Continue",
   },
 
@@ -310,10 +339,16 @@ const CONTENT = {
     workingGuideIntro: (ownLabel) =>
       `Your own result is ${ownLabel}. Here's a short, practical guide to working with colleagues whose results lean differently — useful in meetings, feedback conversations and delegation.`,
     saveFileHeading: "Contributing to a team overlay or blind-spot exercise?",
+    cloudSaveOkNote: (teamCode) =>
+      teamCode
+        ? `Your result has also been saved automatically under team code "${teamCode}" — anyone who loads that code on the team overlay or blind-spot exercise will see it. No file needs to be collected or shared for that to work.`
+        : "You didn't enter a team code, so this result hasn't joined any team's shared overlay — it only exists in the file below, on your own device.",
+    cloudSaveFailNote:
+      "Couldn't reach the shared database just now, so this result hasn't joined a team overlay automatically. The file below still has everything it needs — hand it over the old way (email, a shared folder) if this keeps happening.",
     saveFileAutoNote: (filename) =>
-      `A result file (${filename}) has already started downloading to your device automatically — you don't need to click anything for that part. This only ever goes to your own downloads; nothing is sent anywhere by this tool.`,
+      `A result file (${filename}) has also started downloading to your device automatically — you don't need to click anything for that part. This only ever goes to your own downloads; nothing is sent anywhere by this tool.`,
     saveFileNote:
-      "Saving the file is only half the job, though: if you're contributing to a team overlay or blind-spot exercise, that file still needs to actually reach whoever's collecting them — email it to them, or put it in your team's shared folder (OneDrive, Dropbox, Google Drive, whatever you already use). Skip that step if you're just doing this for yourself. We've filled in the name you gave earlier below — change it and click the button if you'd rather save it again under a different name, or if the automatic download didn't work.",
+      "This file is mainly a personal backup now, and a fallback way to share your result if you didn't use a team code: email it, or put it in a shared folder. We've filled in the name you gave earlier below — change it and click the button if you'd rather save it again under a different name, or if the automatic download didn't work.",
     saveFileNamePlaceholder: "Your name",
     saveFileCta: "Save again",
     footerNote:

@@ -18,8 +18,11 @@
     answers: [], // { questionId, dimension }
     consentGiven: false,
     respondentName: "",
+    teamCode: "",
     lastScoreResult: null,
     autoSavedThisRun: false,
+    cloudSaveAttempted: false,
+    cloudSaveStatus: null, // null | "ok" | "fail" -- set once results are reached
   };
 
   function shuffle(array) {
@@ -43,8 +46,11 @@
     state.answers = [];
     state.consentGiven = false;
     state.respondentName = "";
+    state.teamCode = "";
     state.lastScoreResult = null;
     state.autoSavedThisRun = false;
+    state.cloudSaveAttempted = false;
+    state.cloudSaveStatus = null;
     buildQuestionOrder();
   }
 
@@ -124,6 +130,13 @@
             c.placeholder
           )}" value="${escapeHtml(state.respondentName)}" autocomplete="name" />
           <p class="mvs-note" id="mvs-name-error" hidden></p>
+
+          <label class="mvs-field-label" for="mvs-team-code-input">${escapeHtml(c.teamCodeLabel)}</label>
+          <p class="mvs-note">${escapeHtml(c.teamCodeBody)}</p>
+          <input type="text" id="mvs-team-code-input" class="mvs-text-input" placeholder="${escapeHtml(
+            c.teamCodePlaceholder
+          )}" value="${escapeHtml(state.teamCode)}" autocomplete="off" />
+
           <button type="submit" class="mvs-btn mvs-btn--primary" id="mvs-name-continue">${escapeHtml(
             c.continueCta
           )}</button>
@@ -142,6 +155,7 @@
         return;
       }
       state.respondentName = name;
+      state.teamCode = document.getElementById("mvs-team-code-input").value.trim();
       goTo("questionnaire");
     });
   }
@@ -230,6 +244,16 @@
       state.autoSavedThisRun = true;
     }
 
+    // Save straight to the shared database too (best effort — see
+    // supabaseClient.js). This is what makes team overlay/blind-spot
+    // work by team code instead of collecting files, and is what powers
+    // admin.html's live table. Guarded the same way as the file
+    // auto-save above, so a re-render can't trigger a second insert.
+    if (!state.cloudSaveAttempted) {
+      state.cloudSaveAttempted = true;
+      saveResultToCloud(state.respondentName, state.teamCode, scoreResult);
+    }
+
     const cat = CONTENT.categoryContent[scoreResult.category];
     const rc = CONTENT.results;
     const dimNames = rc.dimensionNames;
@@ -276,6 +300,7 @@
 
         <section class="mvs-section" id="mvs-save-file-section">
           <h2 class="mvs-section-title">${escapeHtml(rc.saveFileHeading)}</h2>
+          <p class="mvs-note" id="mvs-cloud-save-note" hidden></p>
           <p class="mvs-note">${escapeHtml(rc.saveFileAutoNote(resultFileName(state.respondentName)))}</p>
           <p class="mvs-note">${escapeHtml(rc.saveFileNote)}</p>
           <div class="mvs-btn-row">
@@ -303,6 +328,7 @@
 
     const chartContainer = document.getElementById("mvs-chart-container");
     renderResultsChart(chartContainer, scoreResult.percentages, dimNames);
+    updateCloudSaveNote(); // in case the cloud save already resolved before this render
 
     document.getElementById("mvs-restart").addEventListener("click", () => {
       resetRun();
@@ -357,6 +383,43 @@
     a.click();
     a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 2000);
+  }
+
+  /**
+   * Best-effort save straight to the shared database (see
+   * supabaseClient.js) — this never blocks or interrupts the results
+   * screen, the same "fail soft" spirit as the local file auto-save
+   * above and the existing anonymised-aggregate stub in aggregate.js.
+   * Resolves asynchronously; updateCloudSaveNote() reflects the outcome
+   * once it's known.
+   */
+  function saveResultToCloud(name, teamCode, scoreResult) {
+    if (typeof SupabaseClient === "undefined") {
+      state.cloudSaveStatus = "fail";
+      updateCloudSaveNote();
+      return;
+    }
+    const record = {
+      name: name.trim(),
+      people: scoreResult.percentages.people,
+      performance: scoreResult.percentages.performance,
+      process: scoreResult.percentages.process,
+      category: scoreResult.category,
+      team_code: teamCode && teamCode.trim() ? teamCode.trim() : null,
+    };
+    SupabaseClient.insert("submissions", record).then((ok) => {
+      state.cloudSaveStatus = ok ? "ok" : "fail";
+      updateCloudSaveNote();
+    });
+  }
+
+  function updateCloudSaveNote() {
+    const el = document.getElementById("mvs-cloud-save-note");
+    if (!el || !state.cloudSaveStatus) return; // not on this screen, or still pending
+    const rc = CONTENT.results;
+    el.hidden = false;
+    el.textContent =
+      state.cloudSaveStatus === "ok" ? rc.cloudSaveOkNote(state.teamCode) : rc.cloudSaveFailNote;
   }
 
   function renderResultListSection(title, items) {
