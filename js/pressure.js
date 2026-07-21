@@ -131,6 +131,21 @@ const PressureFlow = (function () {
     return pressureState.order[pressureState.currentIndex];
   }
 
+  const RANK_LABELS = [
+    CONTENT.pressureIntro.rankLabels.most,
+    CONTENT.pressureIntro.rankLabels.next,
+    CONTENT.pressureIntro.rankLabels.least,
+  ];
+
+  /**
+   * Builds the full question screen exactly once per *question* (first
+   * arrival, or a real Back/Continue navigation) — this is the only point
+   * that replays the screen's entrance animation, since it's the only
+   * point where the question itself has actually changed. Ranking taps
+   * within the same question are handled entirely by applyRankState()
+   * below, which patches the existing DOM in place rather than rebuilding
+   * it — see that function's comment for why.
+   */
   function renderQuestion(root, handlers) {
     const total = pressureState.order.length;
     const q = currentPressureQuestion();
@@ -139,13 +154,7 @@ const PressureFlow = (function () {
       pressureState.currentRanks = ranksFromAnswer(existingAnswer);
     }
     const pc = CONTENT.pressureProgress;
-    const rankLabels = [
-      CONTENT.pressureIntro.rankLabels.most,
-      CONTENT.pressureIntro.rankLabels.next,
-      CONTENT.pressureIntro.rankLabels.least,
-    ];
     const pct = Math.round((pressureState.currentIndex / total) * 100);
-    const complete = pressureState.currentRanks.length === 3;
 
     root.innerHTML = `
       <div class="mvs-screen mvs-screen--question mvs-screen--pressure-question">
@@ -161,48 +170,31 @@ const PressureFlow = (function () {
         <p class="mvs-note">${escapeHtmlLocal(pc.rankPrompt)}</p>
         <div class="mvs-pressure-options" role="group" aria-label="Rank these responses">
           ${q.options
-            .map((opt, i) => {
-              const rankPos = pressureState.currentRanks.indexOf(opt.dimension);
-              const ranked = rankPos !== -1;
-              const isAuto = opt.dimension === pressureState.lastAutoCompletedDim;
-              return `
-              <button type="button" class="mvs-pressure-option-btn${
-                ranked ? " mvs-pressure-option-btn--ranked" : ""
-              }" data-dimension="${opt.dimension}" data-index="${i}" ${ranked ? "disabled" : ""}>
-                ${
-                  ranked
-                    ? `<span class="mvs-pressure-rank-badge${
-                        isAuto ? " mvs-pressure-rank-badge--auto" : ""
-                      }">${escapeHtmlLocal(rankLabels[rankPos])}</span>`
-                    : ""
-                }
+            .map(
+              (opt, i) => `
+              <button type="button" class="mvs-pressure-option-btn" data-dimension="${opt.dimension}" data-index="${i}">
+                <span class="mvs-pressure-rank-badge-slot"></span>
                 <span class="mvs-option-text">${escapeHtmlLocal(opt.text)}</span>
               </button>
-            `;
-            })
+            `
+            )
             .join("")}
         </div>
-        <p class="mvs-note" id="mvs-pressure-error" ${complete ? "hidden" : ""}>${escapeHtmlLocal(
-      pc.incompleteError
-    )}</p>
+        <p class="mvs-note" id="mvs-pressure-error" hidden>${escapeHtmlLocal(pc.incompleteError)}</p>
         <div class="mvs-btn-row">
           <button type="button" class="mvs-btn mvs-btn--ghost" id="mvs-pressure-back-btn">Back</button>
           <button type="button" class="mvs-btn mvs-btn--ghost" id="mvs-pressure-clear-btn">${escapeHtmlLocal(
             pc.clearCta
           )}</button>
-          <button type="button" class="mvs-btn mvs-btn--primary" id="mvs-pressure-continue-btn" ${
-            complete ? "" : "disabled"
-          }>Continue</button>
+          <button type="button" class="mvs-btn mvs-btn--primary" id="mvs-pressure-continue-btn">Continue</button>
         </div>
       </div>
     `;
 
-    // Initial paint shouldn't show the "rank all three" error before
-    // anyone's touched anything.
-    if (!pressureState.currentRanks.length) {
-      const errEl = document.getElementById("mvs-pressure-error");
-      if (errEl) errEl.hidden = true;
-    }
+    // Paint whatever ranking state already exists for this question (empty
+    // on first arrival, restored via Back) without animating the badges in
+    // — they're just "already there" as far as this screen is concerned.
+    applyRankState(root, { animateBadges: false });
 
     root.querySelectorAll(".mvs-pressure-option-btn").forEach((btn) => {
       btn.addEventListener("click", () => {
@@ -218,7 +210,9 @@ const PressureFlow = (function () {
           pressureState.currentRanks.push(remaining);
           pressureState.lastAutoCompletedDim = remaining;
         }
-        renderQuestion(root, handlers);
+        // In-place update only — see applyRankState()'s comment for why
+        // this deliberately does NOT call renderQuestion() again.
+        applyRankState(root, { animateBadges: true });
       });
     });
 
@@ -230,7 +224,7 @@ const PressureFlow = (function () {
       // ranking from it (see the existingAnswer restore logic above),
       // making "Clear" look like a no-op.
       pressureState.answers[pressureState.currentIndex] = undefined;
-      renderQuestion(root, handlers);
+      applyRankState(root, { animateBadges: false });
     });
 
     document.getElementById("mvs-pressure-back-btn").addEventListener("click", () => {
@@ -264,6 +258,57 @@ const PressureFlow = (function () {
         handlers.onComplete();
       }
     });
+  }
+
+  /**
+   * Patches the already-rendered question screen to reflect the current
+   * ranking state — toggling each option's ranked/disabled state and its
+   * rank badge, the error note, and the Continue button — without
+   * touching anything else in the DOM.
+   *
+   * This used to be handled by calling renderQuestion() again on every
+   * single tap, which tore down and rebuilt the entire screen (replaying
+   * its fade-in-up entrance animation each time, on top of the normal
+   * cost of destroying/recreating every button and its listeners). Worse,
+   * the rank badge used to be inserted as a sibling next to the option
+   * text, which narrowed the space available to the text and could push
+   * it onto an extra line — changing that button's height and visibly
+   * shoving every button below it down the page. Every option button now
+   * always reserves a fixed-height badge slot above its text (see
+   * .mvs-pressure-rank-badge-slot in styles.css) whether or not it's
+   * currently ranked, so filling that slot in never changes the button's
+   * own height, and patching state in place (instead of a full rebuild)
+   * means a tap only ever changes the handful of pixels that actually
+   * changed — no re-animate, no scroll jump, no flash.
+   */
+  function applyRankState(root, opts) {
+    const complete = pressureState.currentRanks.length === 3;
+
+    root.querySelectorAll(".mvs-pressure-option-btn").forEach((btn) => {
+      const dim = btn.getAttribute("data-dimension");
+      const rankPos = pressureState.currentRanks.indexOf(dim);
+      const ranked = rankPos !== -1;
+      const isAuto = opts.animateBadges && dim === pressureState.lastAutoCompletedDim;
+      btn.classList.toggle("mvs-pressure-option-btn--ranked", ranked);
+      btn.disabled = ranked;
+      const slot = btn.querySelector(".mvs-pressure-rank-badge-slot");
+      if (slot) {
+        slot.innerHTML = ranked
+          ? `<span class="mvs-pressure-rank-badge${
+              isAuto ? " mvs-pressure-rank-badge--auto" : ""
+            }">${escapeHtmlLocal(RANK_LABELS[rankPos])}</span>`
+          : "";
+      }
+    });
+
+    // "Please rank all three" only makes sense once someone's part-way
+    // through (not on a completely untouched question, and not once
+    // they've finished) — hidden in both of those end states.
+    const errEl = document.getElementById("mvs-pressure-error");
+    if (errEl) errEl.hidden = complete || pressureState.currentRanks.length === 0;
+
+    const continueBtn = document.getElementById("mvs-pressure-continue-btn");
+    if (continueBtn) continueBtn.disabled = !complete;
   }
 
   // ------------------------------------------------------------------
