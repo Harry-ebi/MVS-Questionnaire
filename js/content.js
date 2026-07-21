@@ -85,6 +85,59 @@ const CONTENT = {
         icon: "blindspot",
       },
     ],
+    adminLinkLabel: "Admin: view all submissions",
+    adminLinkHref: "admin.html",
+  },
+
+  /**
+   * ------------------------------------------------------------------
+   * Admin: all submissions
+   * ------------------------------------------------------------------
+   * A plain-English heads-up: `passphrase` below is stored and checked
+   * in this file, in the clear — anyone who opens this page's source
+   * (View Source / browser dev tools, which anyone can do on any
+   * website) can read it. It is NOT real security. Its only job is to
+   * stop this page reading as an obvious, casual, public link — the
+   * same "you'd have to know to look" logic already used by the
+   * blind-spot exercise (see guess.html's own notes). If you need
+   * genuine access control, this static-site approach isn't it — that
+   * would mean a real backend with server-side login, which is a much
+   * bigger undertaking than anything else in this tool.
+   *
+   * Change the passphrase any time by editing the line below and
+   * re-uploading this file to your host.
+   * ------------------------------------------------------------------
+   */
+  admin: {
+    pageTitle: "Admin: all submissions",
+    intro:
+      "Load everyone's saved result files at once to see them together as a table — the same result-*.json files used by the team overlay and blind-spot exercise, just shown as a plain list here instead of plotted on a triangle.",
+    passphrase: "changeme123",
+    passphraseHeading: "Admin access",
+    passphraseBody:
+      "This isn't public — please don't share this link or passphrase outside the people who should see everyone's submissions.",
+    passphraseLabel: "Passphrase",
+    passphrasePlaceholder: "Enter the admin passphrase",
+    passphraseCta: "View submissions",
+    passphraseError: "That's not right. If you've forgotten it, it's stored in plain text in js/content.js (CONTENT.admin.passphrase) — open that file to check or change it.",
+    securityNote:
+      "Heads up: this passphrase is stored in this site's own code, so it only keeps out casual visitors, not anyone who knows how to view a page's source. Don't use it to gate anything you need real security for.",
+    loadHeading: "Load result files",
+    loadButtonLabel: "Choose result files…",
+    loadHint: "Select all the result-*.json files at once (hold Ctrl/Cmd to multi-select).",
+    invalidFileNote: (fileName) => `Skipped "${fileName}" — it doesn't look like a Ways of Working result file.`,
+    tableHeading: "Submissions",
+    tableEmpty: "No files loaded yet — choose everyone's result files above.",
+    tableCountLabel: (n) => `${n} submission${n === 1 ? "" : "s"} loaded`,
+    colName: "Name",
+    colResult: "Result",
+    colPeople: "People",
+    colPerformance: "Performance",
+    colProcess: "Process",
+    colSubmitted: "Submitted",
+    exportCsvCta: "Download as CSV",
+    exportCta: "Download as PDF",
+    exportNote: "This opens your browser's print dialog — choose “Save as PDF” as the destination.",
   },
 
   team: {
@@ -104,7 +157,7 @@ const CONTENT = {
     overlayHeading: "Team overlay",
     overlayEmpty: "No files loaded yet — choose everyone's result files above to see the overlay.",
     privacyNote:
-      "Everyone whose file you load here can see everyone else's name and result in this overlay, once you show it to them. Make sure your team is comfortable with named (not anonymous) sharing before collecting these files — see the solo tool's own privacy step for the anonymous default. Nothing is uploaded anywhere by this page — the files are only read inside your own browser.",
+      "Everyone whose file you load here can see everyone else's name and result in this overlay, once you show it to them. Make sure your team is comfortable with that before collecting these files — nothing is shared beyond your own browser unless someone chooses to save and hand over a result file. Nothing is uploaded anywhere by this page — the files are only read inside your own browser.",
     invalidFileNote: (fileName) => `Skipped "${fileName}" — it doesn't look like a Ways of Working result file.`,
     analysisHeading: "Team takeaways",
     analysisIntro:
@@ -194,9 +247,8 @@ const CONTENT = {
       "We'd like to be clear about how your information is handled:",
     points: [
       "Your answers are used only to calculate your own result, shown to you at the end.",
-      "You do not need to give your name or email to take part or to see your results.",
-      "If you choose to enter your email to receive a copy of your results, that email is used only for that purpose, and you can ask for it to be deleted at any time.",
-      "We may store an anonymised, aggregated version of results (percentage splits only, with no name, email or other identifying detail) to help us understand overall patterns and improve this tool. Anonymised data cannot be traced back to you.",
+      "You'll be asked for your name next, so your own result is clearly yours — no email address is ever asked for.",
+      "We may store an anonymised, aggregated version of results (percentage splits only, with no name or other identifying detail) to help us understand overall patterns and improve this tool. Anonymised data cannot be traced back to you.",
       "You can stop at any point before submitting your answers without anything being saved.",
     ],
     consentLabel:
@@ -204,15 +256,14 @@ const CONTENT = {
     continueCta: "I understand, continue",
   },
 
-  emailCapture: {
-    title: "Get a copy of your results (optional)",
+  nameCapture: {
+    title: "What's your name?",
     body:
-      "If you'd like a copy of your results emailed to you, enter your address below. This is completely optional — you can skip straight to your results instead.",
-    placeholder: "you@example.com",
-    consentLabel:
-      "I'm happy to be emailed a copy of my results. I can ask for this to be deleted at any time.",
-    submitCta: "Email me my results",
-    skipCta: "Skip, just show my results",
+      "This is so your own results page is clearly yours, and so it's ready to go if you save a result file for a team exercise later. It stays on your own device unless you choose to save or print your results.",
+    label: "Your name",
+    placeholder: "e.g. Alex Smith",
+    errorNote: "Please type your name to continue.",
+    continueCta: "Continue",
   },
 
   progress: {
@@ -220,7 +271,7 @@ const CONTENT = {
   },
 
   results: {
-    headerEyebrow: "Your reflection result",
+    headerEyebrow: (name) => (name ? `${name}'s reflection result` : "Your reflection result"),
     primaryLabel: "Primary driver",
     secondaryLabel: "Secondary driver",
     blendLabel: "Your blended profile",
@@ -243,7 +294,7 @@ const CONTENT = {
       `Your own result is ${ownLabel}. Here's a short, practical guide to working with colleagues whose results lean differently — useful in meetings, feedback conversations and delegation.`,
     saveFileHeading: "Contributing to a team overlay or blind-spot exercise?",
     saveFileNote:
-      "Save a small result file below and put it in your team's shared folder (OneDrive, Dropbox, Google Drive — whatever you already use). No account or setup needed — this is only for that; skip it if you're just doing this for yourself.",
+      "Save a small result file below and put it in your team's shared folder (OneDrive, Dropbox, Google Drive — whatever you already use). No account or setup needed — this is only for that; skip it if you're just doing this for yourself. We've filled in the name you gave earlier — change it here if you'd rather share under a different name.",
     saveFileNamePlaceholder: "Your name",
     saveFileCta: "Save result file",
     footerNote:

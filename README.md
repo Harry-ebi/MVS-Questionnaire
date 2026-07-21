@@ -59,16 +59,23 @@ Pages:
 - `guide.html` — the communication guide ("Working with other colours").
 - `team.html` — load everyone's result files and see the team overlay.
 - `guess.html` — the blind-spot (perception) exercise: guessing, then reveal.
+- `admin.html` — passphrase-gated view of every loaded result file as a
+  plain table, with CSV and PDF export. Linked only as a small text link
+  at the bottom of the home page, not one of the main tiles. See "Admin:
+  all submissions" below for how it works and its real security limits.
 
-## The four flows
+## The five flows
 
 ### 1. Solo reflection
 
-Landing → privacy/consent → ~30 questions → optional email capture →
-results (triangle chart, interpretation, strengths, overuse risks,
-communication tips, and a short "how others can work with you" section).
-Anonymous by default. At the end, there's an optional "Save result file"
-step for anyone contributing to a team exercise.
+Landing → privacy/consent → your name → ~30 questions → results (triangle
+chart, interpretation, strengths, overuse risks, communication tips, and a
+short "how others can work with you" section). Your name is asked up front
+(so your own results page and any file you export are clearly labelled)
+but stays in your own browser unless you choose to export something —
+there's no email step anywhere in this tool. At the end, there's an
+optional "Save result file" step (pre-filled with the name you already
+gave) for anyone contributing to a team exercise.
 
 ### 2. Communication guide ("Working with other colours")
 
@@ -135,6 +142,31 @@ else's guesses until someone deliberately loads all the guesses-and-result
 files together on the second section of this page ("Reveal"). Once loaded,
 it shows, per person: their actual result (solid marker) plus every guess
 made about them, including their own self-guess.
+
+### 5. Admin: all submissions
+
+`admin.html` is the same idea as the team overlay — load a pile of
+`result-*.json` files at once — but instead of a triangle it's a plain,
+sortable-by-eye table: name, result, the three percentages, and when it
+was submitted. There's a "Download as CSV" button (for pulling into Excel
+or Google Sheets) alongside the usual "Download as PDF".
+
+It's behind a passphrase (`CONTENT.admin.passphrase` in `js/content.js`,
+default `changeme123` — change it before real use), and the page is only
+linked from a small text link at the bottom of the home page, not one of
+the main tiles or the nav.
+
+**Read this part properly:** the passphrase is a soft deterrent, not real
+security. It's checked entirely in this page's own JavaScript, which means
+it's sitting in plain text in a file anyone can open (view-source, or a
+browser's dev tools, on any website — nothing special needed). It stops
+this page from reading as an obvious, casual public link; it does **not**
+stop someone who knows how to look. Don't put anything behind it you'd
+be genuinely upset to see leak, and don't rely on it if these result files
+ever contain something more sensitive than a motivation-reflection
+category. Genuine access control — a real login that a server actually
+checks — needs a real backend, which is a much bigger step than anything
+else in this tool (see "Future phase" below).
 
 ## Brand (`css/styles.css` `:root`)
 
@@ -230,7 +262,7 @@ Everything editorial lives in **`js/content.js`**:
   for / what it isn't" explainer text, and the `cards` array (title, body,
   link, CTA label, and an `accent` key used to colour each card's left
   edge to match the tool it links to).
-- `CONTENT.privacy`, `CONTENT.emailCapture`, `CONTENT.team`,
+- `CONTENT.privacy`, `CONTENT.nameCapture`, `CONTENT.team`,
   `CONTENT.guessExercise` — every other screen's copy, including the
   GDPR-style privacy notices.
 
@@ -373,26 +405,24 @@ comments for how to wire it to a real analytics endpoint later if useful.
 Result files and guesses files only exist as files people choose to save
 and share — there's nothing to back up or wipe centrally, and deleting the
 files from the shared folder after a workshop removes all record of that
-session.
-
-## Email capture
-
-Still a **UI-only stub** — it validates input and shows a message, but
-doesn't send or store anything (see `renderEmailCapture` in `js/app.js`).
-Wire the submit handler to your own email/CRM service before relying on
-it.
+session. `admin.html` doesn't change this: it's another page that loads
+the same result files people already save, it doesn't introduce a new
+place those files get sent to.
 
 ## Admin editing
 
 Editing content means editing `js/content.js` directly — there's no
 login-gated admin UI for copy, and none is needed since there's no server
-to log into.
+to log into. (This is a different "admin" from `admin.html` above, which
+is about viewing participants' submitted results, not editing the tool's
+own wording.)
 
 ## Privacy notes (read before using this with real teams)
 
-- **The solo reflection is anonymous by default.** Nothing leaves the
-  person's browser unless they explicitly choose to save a result file for
-  a team exercise.
+- **The solo reflection stays on the person's own device by default.**
+  They're asked for their name up front (so their own results page and any
+  file they export are clearly labelled), but nothing leaves their browser
+  unless they explicitly choose to save a result file for a team exercise.
 - **The team overlay and blind-spot exercise are named, not anonymous, by
   design** — that's the point of the exercise. Anyone who receives the
   shared folder of result/guesses files can see everyone's name alongside
@@ -403,6 +433,10 @@ to log into.
   managed entirely by whatever folder-sharing tool your team already uses
   (OneDrive, Dropbox, etc.), not by this app. Treat the files the same way
   you'd treat any other document containing named personal reflections.
+- **`admin.html`'s passphrase is a soft deterrent, not real access
+  control** — see "Admin: all submissions" above. Anyone with the site's
+  URL and a moment in their browser's dev tools could read or bypass it.
+  Don't treat it as a genuine security boundary.
 
 ## Future phase (not built here)
 

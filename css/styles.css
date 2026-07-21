@@ -399,6 +399,32 @@ h2 {
   text-transform: uppercase;
 }
 
+/* Admin "all submissions" table -------------------------------------- */
+
+.mvs-submissions-table {
+  width: 100%;
+  min-width: 640px;
+  border-collapse: collapse;
+}
+
+.mvs-submissions-table th,
+.mvs-submissions-table td {
+  border: 1px solid var(--border-hairline);
+  padding: 8px 10px;
+  text-align: left;
+  font-size: 0.85rem;
+}
+
+.mvs-submissions-table th {
+  background: var(--surface-card);
+  color: var(--text-primary);
+  font-size: 0.78rem;
+}
+
+.mvs-submissions-table tbody tr:nth-child(even) {
+  background: var(--surface-card);
+}
+
 .mvs-matrix-cell-body {
   margin: 0;
   font-size: 0.78rem;
@@ -669,7 +695,7 @@ h2 {
   color: var(--text-secondary);
 }
 
-#mvs-email-form {
+#mvs-name-form {
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -1282,7 +1308,8 @@ h2 {
     overflow: visible;
   }
 
-  .mvs-comm-matrix {
+  .mvs-comm-matrix,
+  .mvs-submissions-table {
     min-width: 0;
     width: 100%;
   }
@@ -1290,6 +1317,12 @@ h2 {
   .mvs-matrix-cell-body,
   .mvs-matrix-cell-title {
     font-size: 0.72rem;
+  }
+
+  .mvs-submissions-table th,
+  .mvs-submissions-table td {
+    font-size: 0.72rem;
+    padding: 6px 8px;
   }
 
   /* Not useful on paper: navigation, file pickers, warnings about
@@ -1334,6 +1367,7 @@ h2 {
   .mvs-wwd-card,
   .mvs-overlay-table tr,
   .mvs-comm-matrix tr,
+  .mvs-submissions-table tr,
   .mvs-list li,
   /* Each person's actual-vs-guesses block on the blind-spot reveal
      (built dynamically in guess.js) is small enough to keep whole. */
