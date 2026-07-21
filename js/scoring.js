@@ -6,39 +6,43 @@
  * threshold model:
  *
  *   1. Every answer gives exactly 1 point to one of three dimensions:
- *      people, performance, process.
+ *      drive, connection, clarity.
  *   2. Points are converted to a percentage split that sums to 100
  *      (using largest-remainder rounding so the three numbers always
  *      add up cleanly).
- *   3. The gap between the top score and the 2nd, and between the 2nd
- *      and 3rd, decides which of 7 categories the result falls into.
+ *   3. Rather than sorting a result into one of a fixed set of named
+ *      "personality boxes," the three percentages are reported as
+ *      continuous scores, with an optional plain-English *pattern*
+ *      description of their shape — Focused (one dimension clearly
+ *      leads), Dual-led (two lead together) or Balanced (all three are
+ *      close) — generated from the gaps between them. See derivePattern()
+ *      below.
  * -----------------------------------------------------------------------
  */
 
-const DIMENSIONS = ["people", "performance", "process"];
+const DIMENSIONS = ["drive", "connection", "clarity"];
 
-const CATEGORY = {
-  PEOPLE_LED: "people_led",
-  PERFORMANCE_LED: "performance_led",
-  PROCESS_LED: "process_led",
-  PEOPLE_PERFORMANCE_BLEND: "people_performance_blend",
-  PERFORMANCE_PROCESS_BLEND: "performance_process_blend",
-  PROCESS_PEOPLE_BLEND: "process_people_blend",
-  BALANCED_BLEND: "balanced_blend",
+const PATTERN = {
+  FOCUSED: "focused",
+  DUAL: "dual",
+  BALANCED: "balanced",
 };
 
-// Thresholds (in percentage points) driving category selection.
+// Thresholds (in percentage points) driving the pattern description.
 // These are our own, original cut points — not derived from any
-// third-party assessment's scoring rules.
-const LED_GAP_THRESHOLD = 20; // top vs 2nd gap needed to call it a single "-led" driver
-const BLEND_GAP_THRESHOLD = 15; // 2nd vs 3rd gap needed to call it a clean two-way blend
+// third-party assessment's scoring rules — and deliberately kept as
+// named constants so they're easy to retune later.
+const FOCUSED_GAP_THRESHOLD = 10; // top vs 2nd gap needed to call it "Focused"
+const DUAL_TIGHTNESS_THRESHOLD = 9; // top vs 2nd gap allowed for a "Dual-led" pair
+const DUAL_LOW_GAP_THRESHOLD = 8; // how far the 3rd needs to sit below the pair for "Dual-led"
+const BALANCED_RANGE_THRESHOLD = 9; // max-min spread that still reads as "Balanced" (informational; Balanced is really just the fallback when neither of the above match)
 
 /**
- * Tally raw answers into a { people, performance, process } point object.
+ * Tally raw answers into a { drive, connection, clarity } point object.
  * @param {Array<{questionId: string, dimension: string}>} answers
  */
 function tallyAnswers(answers) {
-  const totals = { people: 0, performance: 0, process: 0 };
+  const totals = { drive: 0, connection: 0, clarity: 0 };
   answers.forEach((a) => {
     if (totals.hasOwnProperty(a.dimension)) {
       totals[a.dimension] += 1;
@@ -90,37 +94,51 @@ function rankDimensions(percentages) {
 }
 
 /**
- * Decide which of the 7 categories a ranked result falls into.
+ * A stable key for a pattern result, e.g. "focused_drive",
+ * "dual_drive_clarity", "balanced" — for storage/lookup, kept internal
+ * (never shown to a user directly; see dimensionLabel()/patternSentence()
+ * in content.js for the actual display text).
  */
-function deriveCategory(ranked) {
+function orderedPairKey(a, b) {
+  return DIMENSIONS.filter((d) => d === a || d === b).join("_");
+}
+
+/**
+ * Describe the *shape* of a ranked result — Focused / Dual-led /
+ * Balanced — rather than sorting it into one of a fixed set of named
+ * personality types. Returns { type, primary, secondary, key }; primary/
+ * secondary are always the top two dimensions regardless of pattern
+ * (a "Focused" result still has a secondary — it's just not emphasised).
+ */
+function derivePattern(ranked) {
   const [top, mid, low] = ranked;
   const gapTopMid = top.pct - mid.pct;
   const gapMidLow = mid.pct - low.pct;
 
-  if (gapTopMid >= LED_GAP_THRESHOLD) {
+  if (gapTopMid >= FOCUSED_GAP_THRESHOLD) {
     return {
-      people: CATEGORY.PEOPLE_LED,
-      performance: CATEGORY.PERFORMANCE_LED,
-      process: CATEGORY.PROCESS_LED,
-    }[top.dimension];
+      type: PATTERN.FOCUSED,
+      primary: top.dimension,
+      secondary: mid.dimension,
+      key: `focused_${top.dimension}`,
+    };
   }
 
-  if (gapMidLow >= BLEND_GAP_THRESHOLD) {
-    // Two-way blend of the top two dimensions. Name is fixed by the
-    // *pair*, in the cyclic order People -> Performance -> Process ->
-    // People, matching the brief's category list, regardless of which
-    // of the two scored slightly higher.
-    const pair = new Set([top.dimension, mid.dimension]);
-    if (pair.has("people") && pair.has("performance")) {
-      return CATEGORY.PEOPLE_PERFORMANCE_BLEND;
-    }
-    if (pair.has("performance") && pair.has("process")) {
-      return CATEGORY.PERFORMANCE_PROCESS_BLEND;
-    }
-    return CATEGORY.PROCESS_PEOPLE_BLEND;
+  if (gapTopMid <= DUAL_TIGHTNESS_THRESHOLD && gapMidLow >= DUAL_LOW_GAP_THRESHOLD) {
+    return {
+      type: PATTERN.DUAL,
+      primary: top.dimension,
+      secondary: mid.dimension,
+      key: `dual_${orderedPairKey(top.dimension, mid.dimension)}`,
+    };
   }
 
-  return CATEGORY.BALANCED_BLEND;
+  return {
+    type: PATTERN.BALANCED,
+    primary: top.dimension,
+    secondary: mid.dimension,
+    key: "balanced",
+  };
 }
 
 /**
@@ -131,7 +149,7 @@ function scoreAnswers(answers) {
   const totals = tallyAnswers(answers);
   const percentages = toPercentages(totals);
   const ranked = rankDimensions(percentages);
-  const category = deriveCategory(ranked);
+  const pattern = derivePattern(ranked);
 
   return {
     totals,
@@ -139,25 +157,24 @@ function scoreAnswers(answers) {
     ranked,
     primary: ranked[0].dimension,
     secondary: ranked[1].dimension,
-    category,
+    pattern,
   };
 }
 
 /**
  * -----------------------------------------------------------------------
- * PRESSURE PROFILE scoring
+ * PRIORITIES UNDER PRESSURE scoring
  * -----------------------------------------------------------------------
- * Original scoring logic for the optional "Pressure Profile" add-on
- * (see content.js's CONTENT.pressureQuestions/pressureResults). Each of
- * the 18 questions is a *ranked-choice* answer rather than a single pick:
- * the respondent orders the three responses, and each response's
- * dimension is awarded 2 (most like me), 1 (next most like me) or 0
- * (least like me) points. Points are summed across all 18 questions (max
- * 54 per dimension-set) and converted to percentages the same way as the
- * Everyday scoring above — toPercentages/rankDimensions/deriveCategory
- * are fully reused as-is for the pressure profile's own classification,
- * per the brief's "apply the existing profile-classification rules
- * where possible."
+ * Original scoring logic for the optional "Priorities Under Pressure"
+ * add-on (see content.js's CONTENT.pressureQuestions/pressureResults).
+ * Each of the 18 questions is a *ranked-choice* answer rather than a
+ * single pick: the respondent orders the three responses, and each
+ * response's dimension is awarded 2 (most like me), 1 (next most like
+ * me) or 0 (least like me) points. Points are summed across all 18
+ * questions (max 54 per dimension-set) and converted to percentages the
+ * same way as the Everyday scoring above — toPercentages/rankDimensions/
+ * derivePattern are fully reused as-is for the pressure result's own
+ * pattern description.
  * -----------------------------------------------------------------------
  */
 
@@ -165,12 +182,12 @@ const PRESSURE_QUESTION_COUNT = 18;
 const PRESSURE_MAX_POINTS = PRESSURE_QUESTION_COUNT * 3; // 2+1+0 per question
 
 /**
- * Tally ranked pressure answers into a { people, performance, process }
+ * Tally ranked pressure answers into a { drive, connection, clarity }
  * point total (each out of 54).
- * @param {Array<{questionId: string, points: {people:number, performance:number, process:number}}>} answers
+ * @param {Array<{questionId: string, points: {drive:number, connection:number, clarity:number}}>} answers
  */
 function tallyPressureAnswers(answers) {
-  const totals = { people: 0, performance: 0, process: 0 };
+  const totals = { drive: 0, connection: 0, clarity: 0 };
   answers.forEach((a) => {
     DIMENSIONS.forEach((d) => {
       if (a.points && typeof a.points[d] === "number") {
@@ -186,7 +203,7 @@ function scorePressureAnswers(answers) {
   const totals = tallyPressureAnswers(answers);
   const percentages = toPercentages(totals);
   const ranked = rankDimensions(percentages);
-  const category = deriveCategory(ranked);
+  const pattern = derivePattern(ranked);
 
   return {
     totals,
@@ -194,76 +211,75 @@ function scorePressureAnswers(answers) {
     ranked,
     primary: ranked[0].dimension,
     secondary: ranked[1].dimension,
-    category,
+    pattern,
   };
 }
 
 /**
  * -----------------------------------------------------------------------
- * MOTIVATIONAL SHIFT
+ * DEGREE OF CHANGE
  * -----------------------------------------------------------------------
- * How far the Pressure Profile point sits from the Everyday Profile
- * point, on an equilateral triangle. This uses its own abstract
- * coordinate system (independent of chart.js's pixel-space triangle
- * used for on-screen rendering) so this module stays a plain, testable,
- * DOM-free scoring library — chart.js's shift chart plots the same two
- * percentage splits in its own pixel space for display, but the actual
- * Shift score below is computed here, geometrically, exactly as
- * specified.
+ * How far the Priorities Under Pressure result sits from the Everyday
+ * Priorities result. This uses its own abstract coordinate system
+ * (independent of chart.js's pixel-space layouts used for on-screen
+ * rendering) so this module stays a plain, testable, DOM-free scoring
+ * library. It measures the *degree* to which someone's reported
+ * priorities differ under sustained pressure — not anger, aggression,
+ * emotional stability or conflict-management skill.
  * -----------------------------------------------------------------------
  */
 
-const PRESSURE_VERTICES = {
-  performance: { x: 1, y: 0 },
-  people: { x: -0.5, y: 0.8660254 },
-  process: { x: -0.5, y: -0.8660254 },
+const CHANGE_VERTICES = {
+  drive: { x: 1, y: 0 },
+  connection: { x: -0.5, y: 0.8660254 },
+  clarity: { x: -0.5, y: -0.8660254 },
 };
 const MAX_TRIANGLE_DISTANCE = Math.sqrt(3); // greatest possible distance between two vertices
 
 // How far apart two percentages need to be before we stop calling the
-// difference "broadly unchanged" in narrative copy (spec 8.4).
-const SHIFT_UNCHANGED_THRESHOLD = 5;
+// difference "broadly unchanged" in narrative copy.
+const CHANGE_UNCHANGED_THRESHOLD = 5;
 // How close two dimensions' deltas need to be before we treat them as a
-// tie (a "combination" move) rather than one clear direction (spec 9).
-const SHIFT_TIE_TOLERANCE = 4;
+// tie (a "combination" move) rather than one clear direction.
+const CHANGE_TIE_TOLERANCE = 4;
 
-const SHIFT_BANDS = [
-  { key: "limited", min: 0, max: 14 },
-  { key: "moderate", min: 15, max: 29 },
-  { key: "significant", min: 30, max: 49 },
-  { key: "marked", min: 50, max: 100 },
+const CHANGE_BANDS = [
+  { key: "limited", min: 0, max: 14, label: "Limited change" },
+  { key: "noticeable", min: 15, max: 29, label: "Noticeable change" },
+  { key: "significant", min: 30, max: 49, label: "Significant change" },
+  { key: "marked", min: 50, max: 100, label: "Marked change" },
 ];
 
-function shiftBandFor(score) {
-  const band = SHIFT_BANDS.find((b) => score >= b.min && score <= b.max);
-  return band ? band.key : SHIFT_BANDS[SHIFT_BANDS.length - 1].key;
+function changeBandFor(score) {
+  const band = CHANGE_BANDS.find((b) => score >= b.min && score <= b.max);
+  return band ? band.key : CHANGE_BANDS[CHANGE_BANDS.length - 1].key;
 }
 
-/** percentages ({people, performance, process}, summing ~100) -> abstract {x,y} */
-function percentagesToShiftPoint(percentages) {
-  const p = percentages.performance / 100;
-  const pe = percentages.people / 100;
-  const pr = percentages.process / 100;
-  const { performance, people, process } = PRESSURE_VERTICES;
+/** percentages ({drive, connection, clarity}, summing ~100) -> abstract {x,y} */
+function percentagesToChangePoint(percentages) {
+  const d = percentages.drive / 100;
+  const c = percentages.connection / 100;
+  const cl = percentages.clarity / 100;
+  const { drive, connection, clarity } = CHANGE_VERTICES;
   return {
-    x: p * performance.x + pe * people.x + pr * process.x,
-    y: p * performance.y + pe * people.y + pr * process.y,
+    x: d * drive.x + c * connection.x + cl * clarity.x,
+    y: d * drive.y + c * connection.y + cl * clarity.y,
   };
 }
 
 /**
- * Compute the full Motivational Shift between an Everyday result and a
- * Pressure result (both {people, performance, process} percentage
- * splits summing to ~100).
+ * Compute the full Degree of Change between an Everyday Priorities
+ * result and a Priorities Under Pressure result (both {drive,
+ * connection, clarity} percentage splits summing to ~100).
  */
-function computeShift(everydayPercentages, pressurePercentages) {
-  const everydayPoint = percentagesToShiftPoint(everydayPercentages);
-  const pressurePoint = percentagesToShiftPoint(pressurePercentages);
+function computeChange(everydayPercentages, pressurePercentages) {
+  const everydayPoint = percentagesToChangePoint(everydayPercentages);
+  const pressurePoint = percentagesToChangePoint(pressurePercentages);
   const dx = pressurePoint.x - everydayPoint.x;
   const dy = pressurePoint.y - everydayPoint.y;
   const distance = Math.sqrt(dx * dx + dy * dy);
-  const shiftScore = Math.round((distance / MAX_TRIANGLE_DISTANCE) * 100);
-  const shiftBand = shiftBandFor(shiftScore);
+  const changeScore = Math.round((distance / MAX_TRIANGLE_DISTANCE) * 100);
+  const changeBand = changeBandFor(changeScore);
 
   const deltas = {};
   DIMENSIONS.forEach((d) => {
@@ -273,16 +289,16 @@ function computeShift(everydayPercentages, pressurePercentages) {
   const byDeltaDesc = DIMENSIONS.slice().sort((a, b) => deltas[b] - deltas[a]);
   const largestIncreaseDim = byDeltaDesc[0];
   const maxDelta = deltas[largestIncreaseDim];
-  // Every dimension within SHIFT_TIE_TOLERANCE of the top increase (and
+  // Every dimension within CHANGE_TIE_TOLERANCE of the top increase (and
   // itself a genuine increase) — length > 1 means a real tie, e.g.
-  // "moves away from People towards a combination of Performance and
-  // Process."
-  const tiedIncreaseDims = DIMENSIONS.filter((d) => maxDelta - deltas[d] <= SHIFT_TIE_TOLERANCE && deltas[d] > 0);
+  // "moves away from Connection towards a combination of Drive and
+  // Clarity."
+  const tiedIncreaseDims = DIMENSIONS.filter((d) => maxDelta - deltas[d] <= CHANGE_TIE_TOLERANCE && deltas[d] > 0);
 
   const byDeltaAsc = DIMENSIONS.slice().sort((a, b) => deltas[a] - deltas[b]);
   const largestDecreaseDim = byDeltaAsc[0];
   const minDelta = deltas[largestDecreaseDim];
-  const tiedDecreaseDims = DIMENSIONS.filter((d) => deltas[d] - minDelta <= SHIFT_TIE_TOLERANCE && deltas[d] < 0);
+  const tiedDecreaseDims = DIMENSIONS.filter((d) => deltas[d] - minDelta <= CHANGE_TIE_TOLERANCE && deltas[d] < 0);
 
   const everydayRanked = rankDimensions(everydayPercentages);
   const pressureRanked = rankDimensions(pressurePercentages);
@@ -290,16 +306,16 @@ function computeShift(everydayPercentages, pressurePercentages) {
   const pressurePrimary = pressureRanked[0].dimension;
 
   // No dimension moves more than the "broadly unchanged" threshold in
-  // either direction -- treat the whole picture as balanced/settled,
-  // regardless of which one nudged up or down slightly.
-  const isBalancedMovement = DIMENSIONS.every((d) => Math.abs(deltas[d]) <= SHIFT_UNCHANGED_THRESHOLD);
+  // either direction -- treat the whole picture as settled, regardless
+  // of which one nudged up or down slightly.
+  const isBalancedMovement = DIMENSIONS.every((d) => Math.abs(deltas[d]) <= CHANGE_UNCHANGED_THRESHOLD);
 
   return {
     everydayPoint,
     pressurePoint,
     distance,
-    shiftScore,
-    shiftBand,
+    changeScore,
+    changeBand,
     deltas,
     largestIncreaseDim,
     largestDecreaseDim,
@@ -315,21 +331,25 @@ function computeShift(everydayPercentages, pressurePercentages) {
 if (typeof module !== "undefined" && module.exports) {
   module.exports = {
     DIMENSIONS,
-    CATEGORY,
+    PATTERN,
+    FOCUSED_GAP_THRESHOLD,
+    DUAL_TIGHTNESS_THRESHOLD,
+    DUAL_LOW_GAP_THRESHOLD,
+    BALANCED_RANGE_THRESHOLD,
     scoreAnswers,
     tallyAnswers,
     toPercentages,
     rankDimensions,
-    deriveCategory,
+    derivePattern,
     PRESSURE_QUESTION_COUNT,
     PRESSURE_MAX_POINTS,
     tallyPressureAnswers,
     scorePressureAnswers,
-    PRESSURE_VERTICES,
+    CHANGE_VERTICES,
     MAX_TRIANGLE_DISTANCE,
-    SHIFT_UNCHANGED_THRESHOLD,
-    SHIFT_TIE_TOLERANCE,
-    SHIFT_BANDS,
-    computeShift,
+    CHANGE_UNCHANGED_THRESHOLD,
+    CHANGE_TIE_TOLERANCE,
+    CHANGE_BANDS,
+    computeChange,
   };
 }

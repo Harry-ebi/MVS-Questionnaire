@@ -1,15 +1,16 @@
 /**
  * guide.js
  * -----------------------------------------------------------------------
- * "Working with other colours" — the communication guide, reachable
+ * "Working with different priorities" — the guidance tool, reachable
  * directly from the home page rather than only after completing the full
  * solo reflection. Three ways to tell the page your own starting point:
- *   (a) pick your result directly,
- *   (b) place yourself on the interactive triangle, or
+ *   (a) pick your leading priority directly,
+ *   (b) place yourself on the interactive chart, or
  *   (c) load a previously-saved result-*.json file.
- * Once a starting point is set, it shows a directional guide to working
- * with each of the other six results, plus what to expect meeting someone
- * who shares your own. Entirely local — nothing is uploaded anywhere.
+ * Once a starting point is set, it shows a generated guide (see
+ * js/commsGuidance.js) to working with each of the three dimensions, plus
+ * what to expect meeting someone with a similar pattern to your own.
+ * Entirely local — nothing is uploaded anywhere.
  * -----------------------------------------------------------------------
  */
 
@@ -18,7 +19,7 @@
 
   const root = document.getElementById("app");
   const c = CONTENT.commsGuide;
-  const order = CONTENT.categoryOrder;
+  const dimOrder = CONTENT.dimensionOrder;
   const dimNames = CONTENT.results.dimensionNames;
 
   function escapeHtml(str) {
@@ -37,21 +38,6 @@
     `;
   }
 
-  function renderOveruseArrows(arrows) {
-    if (!arrows || !arrows.length) return "";
-    return `
-      <div class="mvs-arrow-row">
-        ${arrows
-          .map(
-            (a) => `
-          <span class="mvs-arrow-tag"><strong>${escapeHtml(a.strength)}</strong> &rarr; ${escapeHtml(a.overuse)}</span>
-        `
-          )
-          .join("")}
-      </div>
-    `;
-  }
-
   function readFileAsJson(file) {
     return new Promise((resolve) => {
       const reader = new FileReader();
@@ -65,6 +51,15 @@
       reader.onerror = () => resolve({ file, data: null });
       reader.readAsText(file);
     });
+  }
+
+  // Look up the write-up for a full pattern object ({type, primary,
+  // secondary}) — Focused uses dimensionContent, Dual-led uses
+  // dualContent keyed by orderedPairKey, Balanced uses balancedContent.
+  function contentForPattern(pattern) {
+    if (pattern.type === PATTERN.FOCUSED) return CONTENT.dimensionContent[pattern.primary];
+    if (pattern.type === PATTERN.DUAL) return CONTENT.dualContent[orderedPairKey(pattern.primary, pattern.secondary)];
+    return CONTENT.balancedContent;
   }
 
   function renderSelector() {
@@ -114,14 +109,14 @@
 
   function wireMethodPick() {
     const typeGrid = document.getElementById("mvs-type-grid");
-    typeGrid.innerHTML = order
-      .map((id) => {
-        const cat = CONTENT.categoryContent[id];
-        const tagline = CONTENT.workingWithGuide[id].tagline;
+    typeGrid.innerHTML = dimOrder
+      .map((dim) => {
+        const dc = CONTENT.dimensionContent[dim];
+        const tagline = CONTENT.workingWithGuide[dim].tagline;
         return `
-          <button type="button" class="mvs-type-btn" data-category="${id}">
-            <span class="mvs-wwd-swatch mvs-wwd-swatch--${id}"></span>
-            <span class="mvs-type-btn-label">${escapeHtml(cat.label)}</span>
+          <button type="button" class="mvs-type-btn" data-dimension="${dim}">
+            <span class="mvs-wwd-swatch mvs-wwd-swatch--${dim}"></span>
+            <span class="mvs-type-btn-label">${escapeHtml(dc.label)}-led</span>
             <span class="mvs-type-btn-tagline">${escapeHtml(tagline)}</span>
           </button>
         `;
@@ -130,7 +125,9 @@
 
     typeGrid.querySelectorAll(".mvs-type-btn").forEach((btn) => {
       btn.addEventListener("click", () => {
-        renderGuide(btn.getAttribute("data-category"), c.sourcePick);
+        const dim = btn.getAttribute("data-dimension");
+        const pattern = { type: PATTERN.FOCUSED, primary: dim, secondary: dim, key: `focused_${dim}` };
+        renderGuide(dim, pattern, c.sourcePick);
       });
     });
   }
@@ -138,24 +135,28 @@
   function wireMethodTriangle() {
     const readout = document.getElementById("mvs-triangle-readout");
 
+    function currentPattern(pct) {
+      return derivePattern(rankDimensions(pct));
+    }
+
     function updateReadout(pct) {
-      const category = deriveCategory(rankDimensions(pct));
-      const label = CONTENT.categoryContent[category].label;
-      readout.textContent = `${dimNames.people} ${pct.people}% · ${dimNames.performance} ${pct.performance}% · ${dimNames.process} ${pct.process}% — ${c.methodTriangleReadoutPrefix} ${label}`;
+      const pattern = currentPattern(pct);
+      const label = contentForPattern(pattern).label;
+      readout.textContent = `${dimNames.drive} ${pct.drive}% · ${dimNames.connection} ${pct.connection}% · ${dimNames.clarity} ${pct.clarity}% — ${c.methodTriangleReadoutPrefix} ${label}`;
     }
 
     const handle = createInteractiveTriangle(
       document.getElementById("mvs-guide-triangle"),
       dimNames,
-      { people: 34, performance: 33, process: 33 },
+      { drive: 34, connection: 33, clarity: 33 },
       updateReadout
     );
     updateReadout(handle.getPercentages());
 
     document.getElementById("mvs-triangle-confirm").addEventListener("click", () => {
       const pct = handle.getPercentages();
-      const category = deriveCategory(rankDimensions(pct));
-      renderGuide(category, c.sourceTriangle(pct.people, pct.performance, pct.process));
+      const pattern = currentPattern(pct);
+      renderGuide(pattern.primary, pattern, c.sourceTriangle(pct.drive, pct.connection, pct.clarity));
     });
   }
 
@@ -169,8 +170,7 @@
       const file = fileInput.files && fileInput.files[0];
       if (!file) return;
       const { data } = await readFileAsJson(file);
-      const looksValid =
-        data && data.type === "wow-result" && typeof data.category === "string" && CONTENT.categoryContent[data.category];
+      const looksValid = data && data.type === "wow-result" && data.percentages && typeof data.percentages.drive === "number";
       if (!looksValid) {
         errorNote.textContent = c.methodUploadInvalid;
         errorNote.hidden = false;
@@ -178,59 +178,50 @@
         return;
       }
       errorNote.hidden = true;
-      renderGuide(data.category, c.sourceUpload(data.name));
+      const pattern = derivePattern(rankDimensions(data.percentages));
+      renderGuide(pattern.primary, pattern, c.sourceUpload(data.name));
     });
   }
 
   /**
-   * Renders the directional guide for `categoryId` (the reader's own
-   * result): one card per category in CONTENT.categoryOrder, including a
-   * card for meeting someone who shares the reader's own result. Each
-   * card's "best approach" / "what you bring" / "watch for" text is
-   * composed at render time from the existing per-category reference
-   * fields via the templates in CONTENT.commsGuide; the closing one-line
-   * reminder is the bespoke per-pair text from CONTENT.commsGuide.reminders.
+   * Renders the directional guide, written from `meDimension`'s
+   * perspective (the reader's leading priority) — one card per
+   * dimension in CONTENT.dimensionOrder, including a card for meeting
+   * someone who shares the reader's own leading priority. `pattern` is
+   * the reader's full pattern object, used only for the overview
+   * section at the top (so a "Dual-led"/"Balanced" reader still sees
+   * their accurate write-up there, even though the pairwise cards below
+   * work off their single leading priority for simplicity).
    */
-  function renderGuide(categoryId, sourceLine) {
-    const me = CONTENT.categoryContent[categoryId];
-    const meLabel = me.label;
+  function renderGuide(meDimension, pattern, sourceLine) {
+    const overview = contentForPattern(pattern);
+    const meLabel = CONTENT.dimensionContent[meDimension].label;
+    const cards = CommsGuidance.buildAllGuidance(meDimension, dimNames);
 
-    const cards = order
-      .map((themId, index) => {
-        const them = CONTENT.categoryContent[themId];
-        const isSelf = themId === categoryId;
-        const heading = isSelf ? c.selfPairLabel(meLabel) : them.label;
-        const approach = c.approachTemplate(them.quickReference.focus, them.quickReference.avoid);
-        // Cycle through "my" own strengths/overuse-risks by column position
-        // rather than always using entry 0 — keeps the seven cards from
-        // reading as identical repeats of the same two sentences, while
-        // still drawing only on the reader's own already-reviewed content.
-        const strength = c.strengthTemplate(meLabel, me.strengths[index % me.strengths.length], them.quickReference.focus);
-        const watchFor = c.watchForTemplate(me.overuseRisks[index % me.overuseRisks.length]);
-        const reminder = c.reminders[categoryId][themId];
-
-        return `
+    const cardsHtml = cards
+      .map(
+        (card) => `
           <div class="mvs-wwd-card mvs-commguide-card">
-            <div class="mvs-wwd-swatch mvs-wwd-swatch--${themId}"></div>
-            <h3>${escapeHtml(heading)}</h3>
+            <div class="mvs-wwd-swatch mvs-wwd-swatch--${card.dimension}"></div>
+            <h3>${escapeHtml(card.heading)}</h3>
             <p class="mvs-commguide-field-label">${escapeHtml(c.approachLabel)}</p>
             <ul class="mvs-list">
-              ${approach.map((a) => `<li>${escapeHtml(a)}</li>`).join("")}
+              ${card.approach.map((a) => `<li>${escapeHtml(a)}</li>`).join("")}
             </ul>
             <p class="mvs-commguide-field-label">${escapeHtml(c.strengthLabel)}</p>
-            <p class="mvs-commguide-text">${escapeHtml(strength)}</p>
+            <p class="mvs-commguide-text">${escapeHtml(card.strength)}</p>
             <p class="mvs-commguide-field-label">${escapeHtml(c.watchForLabel)}</p>
-            <p class="mvs-commguide-text">${escapeHtml(watchFor)}</p>
-            <p class="mvs-commguide-reminder">${escapeHtml(c.reminderLabel)}: “${escapeHtml(reminder)}”</p>
+            <p class="mvs-commguide-text">${escapeHtml(card.watchFor)}</p>
+            <p class="mvs-commguide-reminder">${escapeHtml(c.reminderLabel)}: “${escapeHtml(card.reminder)}”</p>
           </div>
-        `;
-      })
+        `
+      )
       .join("");
 
     root.innerHTML = `
       <div class="mvs-screen">
         <p class="mvs-eyebrow">${CONTENT.meta.shortName}</p>
-        <h1>${escapeHtml(c.resultHeading(meLabel))}</h1>
+        <h1>${escapeHtml(c.resultHeading(meLabel + "-led"))}</h1>
         <a href="index.html" class="mvs-meta-line mvs-print-hide">&larr; Back to home</a>
 
         <section class="mvs-section">
@@ -242,25 +233,27 @@
 
         <section class="mvs-section">
           <h2 class="mvs-section-title">${escapeHtml(c.overviewHeading)}</h2>
-          <p class="mvs-interpretation">${escapeHtml(me.interpretation)}</p>
+          <p class="mvs-interpretation">${escapeHtml(overview.interpretation)}</p>
 
           <h3 class="mvs-subheading">${escapeHtml(c.overviewStrengthsHeading)}</h3>
           <ul class="mvs-list">
-            ${me.strengths.map((s) => `<li>${escapeHtml(s)}</li>`).join("")}
+            ${overview.strengths.map((s) => `<li>${escapeHtml(s)}</li>`).join("")}
           </ul>
 
-          <h3 class="mvs-subheading">${escapeHtml(c.overviewWatchHeading)}</h3>
-          ${renderOveruseArrows(me.overuseArrows)}
+          <h3 class="mvs-subheading">${escapeHtml(CONTENT.results.overuseHeading)}</h3>
+          <ul class="mvs-list">
+            ${overview.overuseRisks.map((r) => `<li>${escapeHtml(r)}</li>`).join("")}
+          </ul>
 
           <h3 class="mvs-subheading">${escapeHtml(c.overviewApproachHeading)}</h3>
-          ${renderQuickReference(me.quickReference)}
+          ${renderQuickReference(overview.quickReference)}
         </section>
 
         <section class="mvs-section">
           <h2 class="mvs-section-title">${escapeHtml(c.cardsHeading)}</h2>
           <p class="mvs-note">${escapeHtml(c.cardsIntro(meLabel))}</p>
           <div class="mvs-wwd-grid">
-            ${cards}
+            ${cardsHtml}
           </div>
         </section>
 

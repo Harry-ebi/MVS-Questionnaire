@@ -153,13 +153,13 @@
 
       const readout = document.getElementById("mvs-guess-readout");
       function updateReadout(p) {
-        readout.textContent = `${dimNames.people} ${p.people}% · ${dimNames.performance} ${p.performance}% · ${dimNames.process} ${p.process}%`;
+        readout.textContent = `${dimNames.drive} ${p.drive}% · ${dimNames.connection} ${p.connection}% · ${dimNames.clarity} ${p.clarity}%`;
       }
 
       interactiveHandle = createInteractiveTriangle(
         document.getElementById("mvs-guess-triangle"),
         dimNames,
-        { people: 34, performance: 33, process: 33 },
+        { drive: 33, connection: 34, clarity: 33 },
         updateReadout
       );
       updateReadout(interactiveHandle.getPercentages());
@@ -231,9 +231,9 @@
           team_code: teamCode,
           guesser_name: guesserName,
           target_name: g.target,
-          people: g.percentages.people,
-          performance: g.percentages.performance,
-          process: g.percentages.process,
+          drive: g.percentages.drive,
+          connection: g.percentages.connection,
+          clarity: g.percentages.clarity,
         })
       )
     );
@@ -338,13 +338,13 @@
     status.hidden = true;
     const results = submissionsResult.data.map((row) => ({
       name: row.name,
-      percentages: { people: row.people, performance: row.performance, process: row.process },
-      category: row.category,
+      percentages: { drive: row.drive, connection: row.connection, clarity: row.clarity },
+      pattern: row.pattern,
     }));
     const guesses = guessesResult.data.map((row) => ({
       guesser: row.guesser_name,
       target: row.target_name,
-      percentages: { people: row.people, performance: row.performance, process: row.process },
+      percentages: { drive: row.drive, connection: row.connection, clarity: row.clarity },
     }));
     renderRevealOutput(results, guesses);
   }
@@ -354,13 +354,13 @@
     if (!files.length) return;
     const parsed = await Promise.all(files.map(readFileAsJson));
 
-    const results = []; // { name, percentages, category }
+    const results = []; // { name, percentages, pattern }
     const guesses = []; // { guesser, target, percentages }
     const skipped = [];
 
     parsed.forEach(({ file, data }) => {
       if (data && data.type === "wow-result" && typeof data.name === "string" && data.percentages) {
-        results.push({ name: data.name, percentages: data.percentages, category: data.category });
+        results.push({ name: data.name, percentages: data.percentages, pattern: data.pattern });
       } else if (data && data.type === "wow-guesses" && typeof data.guesser === "string" && Array.isArray(data.guesses)) {
         data.guesses.forEach((g) => {
           if (g && typeof g.target === "string" && g.percentages) {

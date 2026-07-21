@@ -2,7 +2,7 @@
  * aggregate.js
  * -----------------------------------------------------------------------
  * Stub for storing ANONYMISED aggregate results (percentage split + the
- * resulting category, no name/email/IP or other identifying detail).
+ * resulting pattern, no name/email/IP or other identifying detail).
  *
  * This v1 build is a static, client-only site, so this stub writes to
  * the browser's localStorage purely as a working demonstration of the
@@ -21,7 +21,7 @@
  *     }
  *
  *   Make sure whatever endpoint you use only ever receives the
- *   percentage split, category and a timestamp — never the
+ *   percentage split, pattern and a timestamp — never the
  *   respondent's name or email, to keep this in line with the GDPR
  *   notice shown in the privacy step.
  * -----------------------------------------------------------------------
@@ -34,7 +34,7 @@ function submitAnonymisedResult(scoreResult) {
     const record = {
       timestamp: new Date().toISOString(),
       percentages: scoreResult.percentages,
-      category: scoreResult.category,
+      pattern: scoreResult.pattern.key,
       // Deliberately no name, email, IP address or user-agent captured.
     };
     const existingRaw = window.localStorage.getItem(AGGREGATE_STORAGE_KEY);

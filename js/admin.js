@@ -59,6 +59,7 @@
         <p class="mvs-eyebrow">${CONTENT.meta.shortName}</p>
         <a href="index.html" class="mvs-meta-line">&larr; Back to home</a>
         <h1>${escapeHtml(c.loginHeading)}</h1>
+        <div class="mvs-callout"><p>${escapeHtml(c.internalUseNotice)}</p></div>
         <p class="mvs-lead">${escapeHtml(c.loginBody)}</p>
         <form id="mvs-admin-gate-form" novalidate>
           <label class="mvs-field-label" for="mvs-admin-email">${escapeHtml(c.emailLabel)}</label>
@@ -127,14 +128,43 @@
     });
   }
 
+  // Look up the write-up for a full pattern object — shared logic with
+  // app.js/guide.js/pressure.js's own copies of this small helper.
+  function contentForPattern(pattern) {
+    if (!pattern) return null;
+    if (pattern.type === PATTERN.FOCUSED) return CONTENT.dimensionContent[pattern.primary];
+    if (pattern.type === PATTERN.DUAL) return CONTENT.dualContent[orderedPairKey(pattern.primary, pattern.secondary)];
+    return CONTENT.balancedContent;
+  }
+
+  // Historical rows only ever stored the pattern *key* (e.g.
+  // "focused_drive", "dual_drive_clarity", "balanced"), not the full
+  // {type, primary, secondary} object — reconstruct that object from the
+  // key so contentForPattern() above can be reused here too.
+  function patternFromKey(key) {
+    if (!key) return null;
+    if (key === "balanced") return { type: PATTERN.BALANCED, primary: null, secondary: null, key };
+    const parts = key.split("_");
+    const type = parts[0];
+    if (type === "focused") return { type: PATTERN.FOCUSED, primary: parts[1], secondary: null, key };
+    if (type === "dual") return { type: PATTERN.DUAL, primary: parts[1], secondary: parts[2], key };
+    return null;
+  }
+
+  function resultLabel(r) {
+    const pattern = patternFromKey(r.pattern);
+    const content = contentForPattern(pattern);
+    return content ? content.label : r.pattern;
+  }
+
   function typeLabel(r) {
     return r.recordType === "pressure" ? c.typePressure : c.typeEveryday;
   }
 
   function shiftLabel(r) {
-    if (r.recordType !== "pressure" || !r.shiftBand) return c.shiftNone;
-    const bandLabel = CONTENT.pressureResults.shiftBandLabels[r.shiftBand] || r.shiftBand;
-    return `${bandLabel} (${r.shiftScore})`;
+    if (r.recordType !== "pressure" || !r.changeBand) return c.shiftNone;
+    const bandLabel = CONTENT.pressureResults.changeBandLabels[r.changeBand] || r.changeBand;
+    return `${bandLabel} (${r.changeScore})`;
   }
 
   function toCsv(records) {
@@ -142,9 +172,9 @@
       c.colName,
       c.colType,
       c.colResult,
-      c.colPeople,
-      c.colPerformance,
-      c.colProcess,
+      c.colDrive,
+      c.colConnection,
+      c.colClarity,
       c.colShift,
       c.colTeamCode,
       c.colSubmitted,
@@ -153,10 +183,10 @@
     const rows = records.map((r) => [
       r.name,
       typeLabel(r),
-      CONTENT.categoryContent[r.category] ? CONTENT.categoryContent[r.category].label : r.category,
-      r.percentages.people,
-      r.percentages.performance,
-      r.percentages.process,
+      resultLabel(r),
+      r.percentages.drive,
+      r.percentages.connection,
+      r.percentages.clarity,
       shiftLabel(r),
       r.teamCode || "",
       r.exportedAt || "",
@@ -190,15 +220,15 @@
 
     const rows = sorted
       .map((r) => {
-        const label = CONTENT.categoryContent[r.category] ? CONTENT.categoryContent[r.category].label : r.category;
+        const label = resultLabel(r);
         return `
           <tr>
             <td>${escapeHtml(r.name)}</td>
             <td>${escapeHtml(typeLabel(r))}</td>
             <td>${escapeHtml(label)}</td>
-            <td>${escapeHtml(r.percentages.people)}%</td>
-            <td>${escapeHtml(r.percentages.performance)}%</td>
-            <td>${escapeHtml(r.percentages.process)}%</td>
+            <td>${escapeHtml(r.percentages.drive)}%</td>
+            <td>${escapeHtml(r.percentages.connection)}%</td>
+            <td>${escapeHtml(r.percentages.clarity)}%</td>
             <td>${escapeHtml(shiftLabel(r))}</td>
             <td>${escapeHtml(r.teamCode || "—")}</td>
             <td>${escapeHtml(formatTimestamp(r.exportedAt))}</td>
@@ -225,9 +255,9 @@
               <th scope="col">${escapeHtml(c.colName)}</th>
               <th scope="col">${escapeHtml(c.colType)}</th>
               <th scope="col">${escapeHtml(c.colResult)}</th>
-              <th scope="col">${escapeHtml(c.colPeople)}</th>
-              <th scope="col">${escapeHtml(c.colPerformance)}</th>
-              <th scope="col">${escapeHtml(c.colProcess)}</th>
+              <th scope="col">${escapeHtml(c.colDrive)}</th>
+              <th scope="col">${escapeHtml(c.colConnection)}</th>
+              <th scope="col">${escapeHtml(c.colClarity)}</th>
               <th scope="col">${escapeHtml(c.colShift)}</th>
               <th scope="col">${escapeHtml(c.colTeamCode)}</th>
               <th scope="col">${escapeHtml(c.colSubmitted)}</th>
@@ -274,10 +304,10 @@
       id: row.id,
       name: row.name,
       recordType: row.record_type || "everyday",
-      percentages: { people: row.people, performance: row.performance, process: row.process },
-      category: row.category,
-      shiftScore: row.shift_score,
-      shiftBand: row.shift_band,
+      percentages: { drive: row.drive, connection: row.connection, clarity: row.clarity },
+      pattern: row.pattern,
+      changeScore: row.change_score,
+      changeBand: row.change_band,
       teamCode: row.team_code,
       exportedAt: row.created_at,
     }));
@@ -322,6 +352,7 @@
             )}</button>
           </div>
           <p class="mvs-lead mvs-print-hide">${escapeHtml(c.intro)}</p>
+          <div class="mvs-callout"><p>${escapeHtml(c.internalUseNotice)}</p></div>
 
           ${loadErrorHtml}
           ${deleteErrorHtml}
@@ -434,15 +465,15 @@
           data.type === "wow-result" &&
           typeof data.name === "string" &&
           data.percentages &&
-          Number.isFinite(data.percentages.people) &&
-          Number.isFinite(data.percentages.performance) &&
-          Number.isFinite(data.percentages.process);
+          Number.isFinite(data.percentages.drive) &&
+          Number.isFinite(data.percentages.connection) &&
+          Number.isFinite(data.percentages.clarity);
         if (looksValid) {
           records.push({
             name: data.name,
-            recordType: "everyday", // imported result-*.json files predate the Pressure Profile add-on
+            recordType: "everyday", // imported result-*.json files predate the Priorities Under Pressure add-on
             percentages: data.percentages,
-            category: data.category,
+            pattern: data.pattern,
             teamCode: data.team_code || null,
             exportedAt: data.exportedAt,
           });

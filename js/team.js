@@ -16,25 +16,37 @@
   const c = CONTENT.team;
   const dimNames = CONTENT.results.dimensionNames;
 
-  const PAIR_ORDER = ["performance", "people", "process"];
+  const PAIR_ORDER = CONTENT.dimensionOrder;
 
-  const DIMENSION_TO_CATEGORY = {
-    performance: "performance_led",
-    people: "people_led",
-    process: "process_led",
-  };
+  // A saved result file/database row only stores the pattern *key* (e.g.
+  // "focused_drive", "dual_drive_clarity", "balanced"); reconstruct the
+  // full {type, primary, secondary} object from it so contentForPattern()
+  // can be reused, the same way admin.js does.
+  function patternFromKey(key) {
+    if (!key) return null;
+    if (key === "balanced") return { type: PATTERN.BALANCED, primary: null, secondary: null, key };
+    const parts = key.split("_");
+    if (parts[0] === "focused") return { type: PATTERN.FOCUSED, primary: parts[1], secondary: null, key };
+    if (parts[0] === "dual") return { type: PATTERN.DUAL, primary: parts[1], secondary: parts[2], key };
+    return null;
+  }
+
+  function contentForPattern(pattern) {
+    if (pattern.type === PATTERN.FOCUSED) return CONTENT.dimensionContent[pattern.primary];
+    if (pattern.type === PATTERN.DUAL) return CONTENT.dualContent[orderedPairKey(pattern.primary, pattern.secondary)];
+    return CONTENT.balancedContent;
+  }
 
   /**
-   * A participant's own saved `category` (one of the 7 blend categories)
-   * is the richest data already sitting in their result file — fall back
-   * to re-deriving it from their percentages only if it's missing or
-   * invalid (e.g. a hand-edited or older file).
+   * A participant's own saved `pattern` key is the richest data already
+   * sitting in their result file — fall back to re-deriving it from
+   * their percentages only if it's missing or invalid (e.g. a
+   * hand-edited or older file).
    */
-  function resolveCategory(participant) {
-    if (participant.category && CONTENT.categoryContent[participant.category]) {
-      return participant.category;
-    }
-    return deriveCategory(rankDimensions(participant.percentages));
+  function resolvePattern(participant) {
+    const fromKey = patternFromKey(participant.pattern);
+    if (fromKey) return fromKey;
+    return derivePattern(rankDimensions(participant.percentages));
   }
 
   function ranked(participant) {
@@ -50,7 +62,7 @@
   }
 
   function computeCounts(participants) {
-    const counts = { performance: 0, people: 0, process: 0 };
+    const counts = { drive: 0, connection: 0, clarity: 0 };
     participants.forEach((p) => {
       counts[primaryDimension(p)]++;
     });
@@ -60,13 +72,13 @@
   /**
    * Auto-generated, plain-English observations about the loaded group,
    * assembled entirely from data already on the page (each participant's
-   * saved category and percentages) plus the existing per-category
+   * saved pattern and percentages) plus the existing per-dimension
    * reference text — nothing here is new copy invented about a specific
    * team. This used to sit alongside a fixed 3x3 "how the styles
-   * communicate" matrix, which was removed as redundant: the
-   * communication guide (guide.html) already covers pairwise dynamics in
-   * far more depth, so this section now goes deeper on the group itself
-   * instead of duplicating a lighter version of that other module.
+   * communicate" matrix, which was removed as redundant: the guidance
+   * tool (guide.html) already covers pairwise dynamics in far more
+   * depth, so this section now goes deeper on the group itself instead
+   * of duplicating a lighter version of that other module.
    */
   function renderTeamAnalysisSection(participants) {
     if (participants.length < 2) {
@@ -92,7 +104,7 @@
     if (counts[topDim] > 0 && tiedForTop === 1) {
       const label = dimNames[topDim];
       takeaways.push(c.analysisDominant(label, counts[topDim], total));
-      const risk = CONTENT.categoryContent[DIMENSION_TO_CATEGORY[topDim]].overuseRisks[0];
+      const risk = CONTENT.dimensionContent[topDim].overuseRisks[0];
       takeaways.push(c.analysisWatchFor(label, risk));
     } else {
       takeaways.push(c.analysisNoDominant);
@@ -105,7 +117,7 @@
         if (secondaryCount > 0) {
           takeaways.push(c.analysisGapSoftened(dimNames[d], secondaryCount));
         } else {
-          const focus = CONTENT.categoryContent[DIMENSION_TO_CATEGORY[d]].quickReference.focus;
+          const focus = CONTENT.dimensionContent[d].quickReference.focus;
           takeaways.push(c.analysisGap(dimNames[d], focus));
         }
       });
@@ -113,37 +125,35 @@
       takeaways.push(c.analysisNoGap);
     }
 
-    const ledCount = participants.filter((p) => resolveCategory(p).endsWith("_led")).length;
-    takeaways.push(c.analysisBlendSplit(ledCount, total - ledCount, total));
+    const focusedCount = participants.filter((p) => resolvePattern(p).type === PATTERN.FOCUSED).length;
+    takeaways.push(c.analysisBlendSplit(focusedCount, total - focusedCount, total));
 
-    // Category breakdown: how many people fall into each of the 7 result
-    // categories (not just the 3 primary dimensions above) — richer than
-    // the primary-driver counts since it captures blends as their own
-    // thing rather than collapsing them into whichever dimension scored
-    // highest.
-    const categoryCounts = {};
+    // Pattern breakdown: how many people fall into each distinct pattern
+    // key seen in this group (not just the 3 primary dimensions above) —
+    // richer than the primary-priority counts since it captures Dual-led
+    // and Balanced results as their own thing rather than collapsing
+    // them into whichever dimension scored highest.
+    const patternCounts = {};
     participants.forEach((p) => {
-      const cat = resolveCategory(p);
-      categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
+      const key = resolvePattern(p).key;
+      patternCounts[key] = (patternCounts[key] || 0) + 1;
     });
-    const breakdownRows = CONTENT.categoryOrder
-      .filter((catId) => categoryCounts[catId])
-      .sort((a, b) => categoryCounts[b] - categoryCounts[a])
-      .map((catId) => c.analysisBreakdownLine(CONTENT.categoryContent[catId].label, categoryCounts[catId], total));
+    const breakdownRows = Object.keys(patternCounts)
+      .sort((a, b) => patternCounts[b] - patternCounts[a])
+      .map((key) => c.analysisBreakdownLine(contentForPattern(patternFromKey(key)).label, patternCounts[key], total));
 
     const rosterRows = participants
       .slice()
       .sort((a, b) => a.name.localeCompare(b.name))
       .map((p) => {
-        const cat = resolveCategory(p);
-        const label = CONTENT.categoryContent[cat].label;
+        const label = contentForPattern(resolvePattern(p)).label;
         return `
           <tr>
             <td>${escapeHtml(p.name)}</td>
             <td>${escapeHtml(label)}</td>
-            <td>${escapeHtml(p.percentages.people)}%</td>
-            <td>${escapeHtml(p.percentages.performance)}%</td>
-            <td>${escapeHtml(p.percentages.process)}%</td>
+            <td>${escapeHtml(p.percentages.drive)}%</td>
+            <td>${escapeHtml(p.percentages.connection)}%</td>
+            <td>${escapeHtml(p.percentages.clarity)}%</td>
           </tr>
         `;
       })
@@ -171,9 +181,9 @@
               <tr>
                 <th scope="col">${escapeHtml(c.colName)}</th>
                 <th scope="col">${escapeHtml(c.colResult)}</th>
-                <th scope="col">${escapeHtml(c.colPeople)}</th>
-                <th scope="col">${escapeHtml(c.colPerformance)}</th>
-                <th scope="col">${escapeHtml(c.colProcess)}</th>
+                <th scope="col">${escapeHtml(c.colDrive)}</th>
+                <th scope="col">${escapeHtml(c.colConnection)}</th>
+                <th scope="col">${escapeHtml(c.colClarity)}</th>
               </tr>
             </thead>
             <tbody>
@@ -262,8 +272,8 @@
       }
       const participants = result.data.map((row) => ({
         name: row.name,
-        percentages: { people: row.people, performance: row.performance, process: row.process },
-        category: row.category,
+        percentages: { drive: row.drive, connection: row.connection, clarity: row.clarity },
+        pattern: row.pattern,
       }));
       renderOverlay(participants, []);
     });
@@ -283,11 +293,11 @@
         data.type === "wow-result" &&
         typeof data.name === "string" &&
         data.percentages &&
-        Number.isFinite(data.percentages.people) &&
-        Number.isFinite(data.percentages.performance) &&
-        Number.isFinite(data.percentages.process);
+        Number.isFinite(data.percentages.drive) &&
+        Number.isFinite(data.percentages.connection) &&
+        Number.isFinite(data.percentages.clarity);
       if (looksValid) {
-        valid.push({ name: data.name, percentages: data.percentages, category: data.category });
+        valid.push({ name: data.name, percentages: data.percentages, pattern: data.pattern });
       } else {
         skipped.push(file.name);
       }

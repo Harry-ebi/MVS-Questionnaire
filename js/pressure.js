@@ -1,17 +1,19 @@
 /**
  * pressure.js
  * -----------------------------------------------------------------------
- * The optional "Pressure Profile" continuation, offered after the
- * Everyday results screen (see js/app.js's renderResults()). Entirely
- * self-contained: its own mini state machine (offer banner -> transition
- * screen -> 18 ranked-choice questions -> report), driven by app.js's
- * screen switch the same way chart.js's render functions are, so the
- * two features stay cleanly separated in one file each.
+ * The optional "Priorities Under Pressure" continuation, offered after
+ * the Everyday Priorities results screen (see js/app.js's
+ * renderResults()). Entirely self-contained: its own mini state machine
+ * (offer banner -> transition screen -> 18 ranked-choice questions ->
+ * report), driven by app.js's screen switch the same way chart.js's
+ * render functions are, so the two features stay cleanly separated in
+ * one file each.
  *
  * Depends on (all loaded earlier — see reflection.html's script order):
  *   - CONTENT (content.js) for all copy, questions and narrative snippets
- *   - DIMENSIONS, scorePressureAnswers, computeShift (scoring.js)
- *   - renderShiftChart, escapeHtmlLocal (chart.js)
+ *   - DIMENSIONS, PATTERN, orderedPairKey, scorePressureAnswers,
+ *     computeChange (scoring.js)
+ *   - renderPriorityShiftChart, escapeHtmlLocal (chart.js)
  *   - SupabaseClient (supabaseClient.js) for the best-effort cloud save
  * -----------------------------------------------------------------------
  */
@@ -22,9 +24,10 @@ const PressureFlow = (function () {
     currentIndex: 0,
     answers: [],
     currentRanks: [],
+    lastAutoCompletedDim: null, // the dimension auto-ranked "least like me" once the other two were picked — used to give it a beat's delay before it pops in, so it reads as intentional rather than an abrupt double-change
     everydayScoreResult: null,
     scoreResult: null,
-    shift: null,
+    change: null,
     respondentName: "",
     teamCode: "",
     cloudSaveAttempted: false,
@@ -56,9 +59,10 @@ const PressureFlow = (function () {
     pressureState.currentIndex = 0;
     pressureState.answers = [];
     pressureState.currentRanks = [];
+    pressureState.lastAutoCompletedDim = null;
     pressureState.everydayScoreResult = everydayScoreResult;
     pressureState.scoreResult = null;
-    pressureState.shift = null;
+    pressureState.change = null;
     pressureState.respondentName = respondentName;
     pressureState.teamCode = teamCode;
     pressureState.cloudSaveAttempted = false;
@@ -72,13 +76,14 @@ const PressureFlow = (function () {
   function renderOfferBannerHtml() {
     const c = CONTENT.pressureOffer;
     return `
-      <section class="mvs-section mvs-pressure-offer mvs-print-hide" id="mvs-pressure-offer">
+      <section class="mvs-pressure-offer mvs-print-hide" id="mvs-pressure-offer">
+        <p class="mvs-pressure-offer-eyebrow">${escapeHtmlLocal(c.eyebrow)}</p>
         <h2 class="mvs-section-title">${escapeHtmlLocal(c.heading)}</h2>
         <p class="mvs-note">${escapeHtmlLocal(c.body)}</p>
         <button type="button" class="mvs-btn mvs-btn--primary" id="mvs-pressure-offer-cta">${escapeHtmlLocal(
           c.cta
         )}</button>
-        <p class="mvs-note">${escapeHtmlLocal(c.skipNote)}</p>
+        <p class="mvs-note mvs-pressure-offer-skip">${escapeHtmlLocal(c.skipNote)}</p>
       </section>
     `;
   }
@@ -159,11 +164,18 @@ const PressureFlow = (function () {
             .map((opt, i) => {
               const rankPos = pressureState.currentRanks.indexOf(opt.dimension);
               const ranked = rankPos !== -1;
+              const isAuto = opt.dimension === pressureState.lastAutoCompletedDim;
               return `
               <button type="button" class="mvs-pressure-option-btn${
                 ranked ? " mvs-pressure-option-btn--ranked" : ""
               }" data-dimension="${opt.dimension}" data-index="${i}" ${ranked ? "disabled" : ""}>
-                ${ranked ? `<span class="mvs-pressure-rank-badge">${escapeHtmlLocal(rankLabels[rankPos])}</span>` : ""}
+                ${
+                  ranked
+                    ? `<span class="mvs-pressure-rank-badge${
+                        isAuto ? " mvs-pressure-rank-badge--auto" : ""
+                      }">${escapeHtmlLocal(rankLabels[rankPos])}</span>`
+                    : ""
+                }
                 <span class="mvs-option-text">${escapeHtmlLocal(opt.text)}</span>
               </button>
             `;
@@ -197,12 +209,14 @@ const PressureFlow = (function () {
         const dim = btn.getAttribute("data-dimension");
         if (pressureState.currentRanks.includes(dim)) return;
         pressureState.currentRanks.push(dim);
+        pressureState.lastAutoCompletedDim = null;
         // Once two of the three are ranked, the last one has only one
         // possible position left — complete it automatically rather
         // than asking for a redundant third tap.
         if (pressureState.currentRanks.length === 2) {
           const remaining = q.options.map((o) => o.dimension).find((d) => !pressureState.currentRanks.includes(d));
           pressureState.currentRanks.push(remaining);
+          pressureState.lastAutoCompletedDim = remaining;
         }
         renderQuestion(root, handlers);
       });
@@ -210,6 +224,7 @@ const PressureFlow = (function () {
 
     document.getElementById("mvs-pressure-clear-btn").addEventListener("click", () => {
       pressureState.currentRanks = [];
+      pressureState.lastAutoCompletedDim = null;
       // Also clear any previously stored answer for this question —
       // otherwise the very next render would immediately restore the
       // ranking from it (see the existingAnswer restore logic above),
@@ -225,6 +240,7 @@ const PressureFlow = (function () {
       }
       pressureState.currentIndex -= 1;
       pressureState.currentRanks = [];
+      pressureState.lastAutoCompletedDim = null;
       renderQuestion(root, handlers);
     });
 
@@ -242,6 +258,7 @@ const PressureFlow = (function () {
       if (pressureState.currentIndex + 1 < total) {
         pressureState.currentIndex += 1;
         pressureState.currentRanks = [];
+        pressureState.lastAutoCompletedDim = null;
         renderQuestion(root, handlers);
       } else {
         handlers.onComplete();
@@ -264,18 +281,26 @@ const PressureFlow = (function () {
     `;
   }
 
-  function buildHeadline(rc, dimNames, shift) {
-    if (shift.isBalancedMovement) {
-      return rc.headline.balanced(dimNames[shift.largestIncreaseDim] || dimNames[shift.everydayPrimary]);
+  // Look up the write-up for a full pattern object — shared logic with
+  // app.js/guide.js's own copies of this small helper.
+  function contentForPattern(pattern) {
+    if (pattern.type === PATTERN.FOCUSED) return CONTENT.dimensionContent[pattern.primary];
+    if (pattern.type === PATTERN.DUAL) return CONTENT.dualContent[orderedPairKey(pattern.primary, pattern.secondary)];
+    return CONTENT.balancedContent;
+  }
+
+  function buildHeadline(rc, dimNames, change) {
+    if (change.isBalancedMovement) {
+      return rc.headline.balanced(dimNames[change.largestIncreaseDim] || dimNames[change.everydayPrimary]);
     }
-    if (!shift.primaryChanged) {
-      return rc.headline.sameFocusIntensifies(dimNames[shift.everydayPrimary]);
+    if (!change.primaryChanged) {
+      return rc.headline.sameFocusIntensifies(dimNames[change.everydayPrimary]);
     }
-    if (shift.tiedIncreaseDims.length > 1) {
-      const [a, b] = shift.tiedIncreaseDims;
-      return rc.headline.towardsCombination(dimNames[shift.largestDecreaseDim], dimNames[a], dimNames[b]);
+    if (change.tiedIncreaseDims.length > 1) {
+      const [a, b] = change.tiedIncreaseDims;
+      return rc.headline.towardsCombination(dimNames[change.largestDecreaseDim], dimNames[a], dimNames[b]);
     }
-    return rc.headline.movement(dimNames[shift.everydayPrimary], dimNames[shift.pressurePrimary]);
+    return rc.headline.movement(dimNames[change.everydayPrimary], dimNames[change.pressurePrimary]);
   }
 
   function changeCell(rc, delta) {
@@ -288,41 +313,41 @@ const PressureFlow = (function () {
     const answers = pressureState.answers.filter(Boolean);
     const scoreResult = scorePressureAnswers(answers);
     pressureState.scoreResult = scoreResult;
-    const shift = computeShift(everyday.percentages, scoreResult.percentages);
-    pressureState.shift = shift;
+    const change = computeChange(everyday.percentages, scoreResult.percentages);
+    pressureState.change = change;
     pressureState.respondentName = handlers.respondentName;
     pressureState.teamCode = handlers.teamCode;
 
     if (!pressureState.cloudSaveAttempted) {
       pressureState.cloudSaveAttempted = true;
-      saveResultToCloud(handlers.respondentName, handlers.teamCode, everyday, scoreResult, shift);
+      saveResultToCloud(handlers.respondentName, handlers.teamCode, everyday, scoreResult, change);
     }
 
     const rc = CONTENT.pressureResults;
     const dimNames = CONTENT.results.dimensionNames;
-    const everydayCat = CONTENT.categoryContent[everyday.category];
-    const pressureCat = CONTENT.categoryContent[scoreResult.category];
+    const everydayCat = contentForPattern(everyday.pattern);
+    const pressureCat = contentForPattern(scoreResult.pattern);
 
-    const bandKey = shift.shiftBand;
-    const bandLabel = rc.shiftBandLabels[bandKey];
-    const bandDesc = rc.shiftBandDescriptions[bandKey];
-    const intensityWord = rc.shiftIntensityWord[bandKey];
+    const bandKey = change.changeBand;
+    const bandLabel = rc.changeBandLabels[bandKey];
+    const bandDesc = rc.changeBandDescriptions[bandKey];
+    const intensityWord = rc.changeIntensityWord[bandKey];
 
-    const increaseDim = shift.largestIncreaseDim;
-    const decreaseDim = shift.largestDecreaseDim;
+    const increaseDim = change.largestIncreaseDim;
+    const decreaseDim = change.largestDecreaseDim;
     const movement = CONTENT.pressureMovement[increaseDim];
     const decreaseMovement = CONTENT.pressureMovement[decreaseDim];
 
-    const headline = buildHeadline(rc, dimNames, shift);
+    const headline = buildHeadline(rc, dimNames, change);
     const adjectives = rc.increaseAdjectives[increaseDim].join(", ");
     const summary =
-      `In everyday working relationships, you are primarily motivated by ${rc.everydayFocusPhrase[shift.everydayPrimary]}. ` +
+      `In everyday working relationships, your priorities are led by ${rc.everydayFocusPhrase[change.everydayPrimary]}. ` +
       `When disagreement continues, your priorities shift towards ${rc.pressureFocusPhrase[increaseDim]}. ` +
       `This is a ${bandLabel.toLowerCase()}, meaning colleagues may experience you as ${intensityWord} more ${adjectives} than they normally expect.`;
 
     const noticeBullets = movement.increaseNotice.slice(0, 3).concat(decreaseDim !== increaseDim ? [decreaseMovement.decreaseNotice] : []);
     const valueBullets = movement.increaseValue;
-    const riskBullets = movement.increaseRisk.concat([rc.shiftAwarenessRisk(bandLabel)]);
+    const riskBullets = movement.increaseRisk.concat([rc.changeAwarenessRisk(bandLabel)]);
     const selfMgmtBullets = movement.increaseSelfManagement.concat([rc.selfManagementClosing]);
 
     root.innerHTML = `
@@ -347,8 +372,8 @@ const PressureFlow = (function () {
             <p class="mvs-summary-value">${escapeHtmlLocal(pressureCat.label)}</p>
           </div>
           <div class="mvs-result-summary-card mvs-result-summary-card--wide">
-            <p class="mvs-summary-label">${escapeHtmlLocal(rc.shiftLabel)}</p>
-            <p class="mvs-summary-value">${escapeHtmlLocal(bandLabel)} (${shift.shiftScore})</p>
+            <p class="mvs-summary-label">${escapeHtmlLocal(rc.changeLabel)}</p>
+            <p class="mvs-summary-value">${escapeHtmlLocal(bandLabel)} (${change.changeScore})</p>
           </div>
         </div>
 
@@ -364,7 +389,7 @@ const PressureFlow = (function () {
             <table class="mvs-overlay-table">
               <thead>
                 <tr>
-                  <th>${escapeHtmlLocal(rc.colMotivation)}</th>
+                  <th>${escapeHtmlLocal(rc.colPriority)}</th>
                   <th>${escapeHtmlLocal(rc.colEveryday)}</th>
                   <th>${escapeHtmlLocal(rc.colPressure)}</th>
                   <th>${escapeHtmlLocal(rc.colChange)}</th>
@@ -377,7 +402,7 @@ const PressureFlow = (function () {
                     <td>${escapeHtmlLocal(dimNames[d])}</td>
                     <td>${everyday.percentages[d]}%</td>
                     <td>${scoreResult.percentages[d]}%</td>
-                    <td>${escapeHtmlLocal(changeCell(rc, shift.deltas[d]))}</td>
+                    <td>${escapeHtmlLocal(changeCell(rc, change.deltas[d]))}</td>
                   </tr>
                 `
                 ).join("")}
@@ -417,7 +442,7 @@ const PressureFlow = (function () {
     `;
 
     const chartContainer = document.getElementById("mvs-shift-chart-container");
-    renderShiftChart(chartContainer, everyday.percentages, scoreResult.percentages, dimNames, {
+    renderPriorityShiftChart(chartContainer, everyday.percentages, scoreResult.percentages, dimNames, {
       everyday: rc.chartLegendEveryday,
       pressure: rc.chartLegendPressure,
     });
@@ -431,15 +456,15 @@ const PressureFlow = (function () {
   /**
    * Best-effort save to the shared database (see supabaseClient.js and
    * README's "Database setup"). This extends the same `submissions`
-   * table the Everyday result already saved a row to a moment earlier —
-   * rather than updating that row (which would need a new UPDATE RLS
-   * policy the anon role doesn't have, and no easy way to re-identify
-   * that row client-side), it inserts a second, self-contained row with
-   * `record_type: "pressure"` carrying both the pressure scores and a
-   * copy of the everyday scores/shift data, so nothing needs joining
-   * back together later for reporting.
+   * table the Everyday Priorities result already saved a row to a
+   * moment earlier — rather than updating that row (which would need a
+   * new UPDATE RLS policy the anon role doesn't have, and no easy way
+   * to re-identify that row client-side), it inserts a second,
+   * self-contained row with `record_type: "pressure"` carrying both the
+   * pressure scores and a copy of the everyday scores/change data, so
+   * nothing needs joining back together later for reporting.
    */
-  function saveResultToCloud(name, teamCode, everyday, scoreResult, shift) {
+  function saveResultToCloud(name, teamCode, everyday, scoreResult, change) {
     if (typeof SupabaseClient === "undefined") {
       pressureState.cloudSaveStatus = "fail";
       updateCloudSaveNote();
@@ -448,17 +473,17 @@ const PressureFlow = (function () {
     const record = {
       name: name.trim(),
       record_type: "pressure",
-      people: scoreResult.percentages.people,
-      performance: scoreResult.percentages.performance,
-      process: scoreResult.percentages.process,
-      category: scoreResult.category,
-      everyday_people: everyday.percentages.people,
-      everyday_performance: everyday.percentages.performance,
-      everyday_process: everyday.percentages.process,
-      shift_score: shift.shiftScore,
-      shift_band: shift.shiftBand,
-      largest_increase_dimension: shift.largestIncreaseDim,
-      largest_decrease_dimension: shift.largestDecreaseDim,
+      drive: scoreResult.percentages.drive,
+      connection: scoreResult.percentages.connection,
+      clarity: scoreResult.percentages.clarity,
+      pattern: scoreResult.pattern.key,
+      everyday_drive: everyday.percentages.drive,
+      everyday_connection: everyday.percentages.connection,
+      everyday_clarity: everyday.percentages.clarity,
+      change_score: change.changeScore,
+      change_band: change.changeBand,
+      largest_increase_dimension: change.largestIncreaseDim,
+      largest_decrease_dimension: change.largestDecreaseDim,
       team_code: teamCode && teamCode.trim() ? teamCode.trim() : null,
     };
     SupabaseClient.insert("submissions", record).then((ok) => {

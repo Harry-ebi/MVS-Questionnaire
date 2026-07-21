@@ -42,12 +42,17 @@
   --tool-guide: #5c9a3c; /* deeper Corporate Green, for contrast with the white icon strokes */
 
   /* Chart series colours are a separate, deliberately validated system
-     (contrast + colour-vision-deficiency checked for the People /
-     Performance / Process triangle) — kept independent of the brand
-     accent colours above so the data encoding stays legible. */
-  --series-people: #2a6fdb;
-  --series-performance: #d1453b;
-  --series-process: #1f9254;
+     (contrast + colour-vision-deficiency checked for the Drive /
+     Connection / Clarity charts) — kept independent of the brand accent
+     colours above so the data encoding stays legible. Amber / purple /
+     teal: a triad chosen so each pair differs in both hue and lightness
+     (rather than relying on hue alone), which keeps them distinguishable
+     under the common forms of colour-vision deficiency, and confirmed
+     >=4.5:1 contrast against white (light values) and the app's dark
+     surface (dark values) — see README.md for the checked figures. */
+  --series-drive: #8a5300;
+  --series-connection: #6b3fa0;
+  --series-clarity: #0f7a6c;
 
   --radius-md: 12px;
   --radius-sm: 8px;
@@ -71,9 +76,9 @@
     --accent-contrast: #ffffff;
     --brand-green: #95c985;
 
-    --series-people: #4a8ce8;
-    --series-performance: #e35d52;
-    --series-process: #2aa868;
+    --series-drive: #e3a640;
+    --series-connection: #c4a3ec;
+    --series-clarity: #4fd1c5;
   }
 }
 
@@ -445,26 +450,26 @@ h2 {
   margin-bottom: 10px;
 }
 
-.mvs-wwd-swatch--people_led {
-  background: var(--series-people);
+.mvs-wwd-swatch--drive {
+  background: var(--series-drive);
 }
-.mvs-wwd-swatch--performance_led {
-  background: var(--series-performance);
+.mvs-wwd-swatch--connection {
+  background: var(--series-connection);
 }
-.mvs-wwd-swatch--process_led {
-  background: var(--series-process);
+.mvs-wwd-swatch--clarity {
+  background: var(--series-clarity);
 }
-.mvs-wwd-swatch--people_performance_blend {
-  background: linear-gradient(90deg, var(--series-people), var(--series-performance));
+.mvs-wwd-swatch--drive_connection {
+  background: linear-gradient(90deg, var(--series-drive), var(--series-connection));
 }
-.mvs-wwd-swatch--performance_process_blend {
-  background: linear-gradient(90deg, var(--series-performance), var(--series-process));
+.mvs-wwd-swatch--drive_clarity {
+  background: linear-gradient(90deg, var(--series-drive), var(--series-clarity));
 }
-.mvs-wwd-swatch--process_people_blend {
-  background: linear-gradient(90deg, var(--series-process), var(--series-people));
+.mvs-wwd-swatch--connection_clarity {
+  background: linear-gradient(90deg, var(--series-connection), var(--series-clarity));
 }
-.mvs-wwd-swatch--balanced_blend {
-  background: linear-gradient(90deg, var(--series-people), var(--series-performance), var(--series-process));
+.mvs-wwd-swatch--balanced {
+  background: linear-gradient(90deg, var(--series-drive), var(--series-connection), var(--series-clarity));
 }
 
 .mvs-wwd-card h3 {
@@ -798,6 +803,36 @@ h2 {
 
 /* Pressure Profile: ranked-choice options -------------------------------- */
 
+@keyframes mvsFadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes mvsBadgePop {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Whole question card fades/slides in on every question change — the
+   same DOM gets fully rebuilt each time (no framework diffing here), so
+   without this the switch between questions reads as an abrupt "jump"
+   rather than a step forward. */
+.mvs-screen--pressure-question {
+  animation: mvsFadeInUp 0.25s ease both;
+}
+
 .mvs-pressure-options {
   display: flex;
   flex-direction: column;
@@ -818,7 +853,7 @@ h2 {
   font-size: 0.98rem;
   cursor: pointer;
   min-height: 56px;
-  transition: border-color 0.15s ease, background 0.15s ease, opacity 0.15s ease;
+  transition: border-color 0.2s ease, background 0.2s ease, opacity 0.2s ease;
 }
 
 .mvs-pressure-option-btn:hover:not(:disabled) {
@@ -844,13 +879,37 @@ h2 {
   font-size: 0.72rem;
   font-weight: 700;
   white-space: nowrap;
+  animation: mvsBadgePop 0.2s ease both;
+}
+
+/* The third response completes itself once the other two are ranked —
+   a small delay before it pops in (rather than appearing in the exact
+   same instant as the 2nd tap) reads as "the system just filled this
+   in" rather than an unexplained double-change happening at once. */
+.mvs-pressure-rank-badge--auto {
+  animation-delay: 0.15s;
 }
 
 .mvs-pressure-offer {
   background: var(--surface-card);
   border: 1px solid var(--border-hairline);
+  border-left: 4px solid var(--accent);
   border-radius: var(--radius-md);
-  padding: 16px;
+  padding: 18px 16px;
+  margin: 20px 0;
+}
+
+.mvs-pressure-offer-eyebrow {
+  margin: 0 0 4px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+}
+
+.mvs-pressure-offer-skip {
+  color: var(--text-muted);
 }
 
 /* Results ---------------------------------------------------------------- */
@@ -975,23 +1034,51 @@ h2 {
   stroke-width: 2.5;
 }
 
-.mvs-bar {
+/* Horizontal score bars — the primary single-person results chart.
+   One bar per dimension (not a single stacked 100% bar), each showing
+   its own percentage independently, so all three scores are directly
+   comparable at a glance without needing a triangle/geometric layout. */
+.mvs-scorebars {
   display: flex;
   flex-direction: column;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.mvs-scorebar-row {
+  display: flex;
+  align-items: center;
   gap: 10px;
 }
 
-.mvs-bar-track {
-  display: flex;
-  width: 100%;
-  height: 16px;
-  border-radius: 999px;
-  overflow: hidden;
-  border: 1px solid var(--border-hairline);
+.mvs-scorebar-label {
+  flex: 0 0 108px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text-primary);
 }
 
-.mvs-bar-segment {
+.mvs-scorebar-track {
+  flex: 1 1 auto;
+  height: 18px;
+  border-radius: 999px;
+  background: var(--gridline);
+  border: 1px solid var(--border-hairline);
+  overflow: hidden;
+}
+
+.mvs-scorebar-fill {
   height: 100%;
+  border-radius: 999px;
+  transition: width 0.25s ease;
+}
+
+.mvs-scorebar-value {
+  flex: 0 0 46px;
+  text-align: right;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text-secondary);
 }
 
 .mvs-legend {
@@ -1074,27 +1161,80 @@ h2 {
   stroke-width: 3;
 }
 
-/* Motivational Shift chart (Everyday + Pressure points, joined by an
-   arrow) -- fixed tones for the same reason as the overlay markers
-   above: this sits on the always-light colour wash regardless of the
-   app's theme. */
-.mvs-shift-arrow-line {
-  stroke: #14101a;
-  stroke-width: 2;
+/* Priority Shift chart — three horizontal lanes (one per dimension),
+   each showing the Everyday Priorities position and the Priorities
+   Under Pressure position along a 0-100 track, joined by a plain
+   connecting bar rather than an arrow, and distinguished by marker
+   shape (circle vs. diamond) as well as position — never by colour
+   alone, and deliberately not triangle- or arrow-based. */
+.mvs-priority-shift {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin-bottom: 18px;
 }
 
-.mvs-shift-arrowhead {
-  fill: #14101a;
+.mvs-priority-lane {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
-.mvs-shift-marker-ring {
-  fill: #ffffff;
-  stroke: #14101a;
-  stroke-width: 2.5;
+.mvs-priority-lane-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 0.88rem;
 }
 
-.mvs-shift-marker-ring--pressure {
-  stroke-width: 2.5;
+.mvs-priority-lane-label {
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.mvs-priority-lane-delta {
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+}
+
+.mvs-priority-lane-track {
+  position: relative;
+  height: 34px;
+  border-radius: 999px;
+  background: var(--gridline);
+  border: 1px solid var(--border-hairline);
+}
+
+.mvs-priority-lane-connector {
+  position: absolute;
+  top: 50%;
+  height: 4px;
+  transform: translateY(-50%);
+  border-radius: 999px;
+  opacity: 0.55;
+}
+
+.mvs-priority-lane-marker {
+  position: absolute;
+  top: 50%;
+  width: 18px;
+  height: 18px;
+  transform: translate(-50%, -50%);
+  border: 2.5px solid #14101a;
+  box-sizing: border-box;
+}
+
+.mvs-priority-lane-marker--everyday {
+  border-radius: 50%;
+  background: #ffffff;
+}
+
+.mvs-priority-lane-marker--pressure {
+  border-radius: 3px;
+  transform: translate(-50%, -50%) rotate(45deg);
+  width: 13px;
+  height: 13px;
+  background: #14101a;
 }
 
 .mvs-shift-legend-swatch {

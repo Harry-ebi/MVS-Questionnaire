@@ -226,6 +226,23 @@
     }
   }
 
+  // Look up the write-up for a full pattern object ({type, primary,
+  // secondary}) — Focused uses dimensionContent, Dual-led uses
+  // dualContent keyed by orderedPairKey, Balanced uses balancedContent.
+  // Shared with guide.js's own copy of this small helper.
+  function contentForPattern(pattern) {
+    if (pattern.type === PATTERN.FOCUSED) return CONTENT.dimensionContent[pattern.primary];
+    if (pattern.type === PATTERN.DUAL) return CONTENT.dualContent[orderedPairKey(pattern.primary, pattern.secondary)];
+    return CONTENT.balancedContent;
+  }
+
+  function patternHeadline(pattern, dimNames) {
+    const h = CONTENT.results.patternHeadline;
+    if (pattern.type === PATTERN.FOCUSED) return h.focused(dimNames[pattern.primary]);
+    if (pattern.type === PATTERN.DUAL) return h.dual(dimNames[pattern.primary], dimNames[pattern.secondary]);
+    return h.balanced();
+  }
+
   function renderResults() {
     const answers = state.answers.filter(Boolean);
     const scoreResult = scoreAnswers(answers);
@@ -254,15 +271,17 @@
       saveResultToCloud(state.respondentName, state.teamCode, scoreResult);
     }
 
-    const cat = CONTENT.categoryContent[scoreResult.category];
+    const cat = contentForPattern(scoreResult.pattern);
     const rc = CONTENT.results;
     const dimNames = rc.dimensionNames;
+    const patternTag = rc.patternTag[scoreResult.pattern.type];
 
     root.innerHTML = `
       <div class="mvs-screen mvs-screen--results" id="mvs-results-capture">
         <a href="index.html" class="mvs-meta-line mvs-print-hide">&larr; Back to home</a>
         <p class="mvs-eyebrow">${escapeHtml(rc.headerEyebrow(state.respondentName))}</p>
         <h1>${escapeHtml(cat.label)}</h1>
+        <p class="mvs-lead">${escapeHtml(patternHeadline(scoreResult.pattern, dimNames))}</p>
 
         <div class="mvs-result-summary-grid">
           <div class="mvs-result-summary-card">
@@ -274,8 +293,8 @@
             <p class="mvs-summary-value">${escapeHtml(dimNames[scoreResult.secondary])}</p>
           </div>
           <div class="mvs-result-summary-card mvs-result-summary-card--wide">
-            <p class="mvs-summary-label">${escapeHtml(rc.blendLabel)}</p>
-            <p class="mvs-summary-value">${escapeHtml(cat.label)}</p>
+            <p class="mvs-summary-label">${escapeHtml(rc.patternLabel)}</p>
+            <p class="mvs-summary-value">${escapeHtml(patternTag)}</p>
           </div>
         </div>
 
@@ -288,17 +307,16 @@
           <p class="mvs-interpretation">${escapeHtml(cat.interpretation)}</p>
         </section>
 
-        ${renderResultListSection("Potential strengths", cat.strengths)}
-        ${renderResultListSection("Possible overuse risks", cat.overuseRisks)}
-        ${renderOveruseArrowsSection(cat.overuseArrows)}
-        ${renderResultListSection("Communication tips", cat.communicationTips)}
+        ${PressureFlow.renderOfferBannerHtml()}
+
+        ${renderResultListSection(rc.strengthsHeading, cat.strengths)}
+        ${renderResultListSection(rc.overuseHeading, cat.overuseRisks)}
+        ${renderResultListSection(rc.communicationTipsHeading, cat.communicationTips)}
         ${renderQuickReferenceSection(cat.quickReference)}
-        ${renderResultListSection("How others may best work with you", cat.howOthersCanWork)}
-        ${renderWorkingWithGuideSection(scoreResult.category, cat.label)}
+        ${renderResultListSection(rc.howOthersCanWorkHeading, cat.howOthersCanWork)}
+        ${renderWorkingWithGuideSection(scoreResult.primary, cat.label)}
 
         <p class="mvs-footer-note">${escapeHtml(rc.footerNote)}</p>
-
-        ${PressureFlow.renderOfferBannerHtml()}
 
         <section class="mvs-section" id="mvs-save-file-section">
           <h2 class="mvs-section-title">${escapeHtml(rc.saveFileHeading)}</h2>
@@ -378,7 +396,7 @@
       type: "wow-result",
       name: name.trim(),
       percentages: scoreResult.percentages,
-      category: scoreResult.category,
+      pattern: scoreResult.pattern.key,
       exportedAt: new Date().toISOString(),
     };
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
@@ -408,10 +426,10 @@
     }
     const record = {
       name: name.trim(),
-      people: scoreResult.percentages.people,
-      performance: scoreResult.percentages.performance,
-      process: scoreResult.percentages.process,
-      category: scoreResult.category,
+      drive: scoreResult.percentages.drive,
+      connection: scoreResult.percentages.connection,
+      clarity: scoreResult.percentages.clarity,
+      pattern: scoreResult.pattern.key,
       team_code: teamCode && teamCode.trim() ? teamCode.trim() : null,
     };
     SupabaseClient.insert("submissions", record).then((ok) => {
@@ -440,25 +458,6 @@
     `;
   }
 
-  function renderOveruseArrowsSection(arrows) {
-    if (!arrows || !arrows.length) return "";
-    return `
-      <section class="mvs-section">
-        <div class="mvs-arrow-row">
-          ${arrows
-            .map(
-              (a) => `
-            <span class="mvs-arrow-tag"><strong>${escapeHtml(a.strength)}</strong> &rarr; ${escapeHtml(
-                a.overuse
-              )}</span>
-          `
-            )
-            .join("")}
-        </div>
-      </section>
-    `;
-  }
-
   function renderQuickReferenceSection(ref) {
     if (!ref) return "";
     return `
@@ -471,11 +470,10 @@
     `;
   }
 
-  function renderWorkingWithGuideSection(ownCategoryId, ownLabel) {
+  function renderWorkingWithGuideSection(ownDimension, ownLabel) {
     const rc = CONTENT.results;
     const guide = CONTENT.workingWithGuide;
-    const order = CONTENT.categoryOrder;
-    const others = order.filter((id) => id !== ownCategoryId);
+    const others = CONTENT.dimensionOrder.filter((d) => d !== ownDimension);
 
     return `
       <section class="mvs-section">
@@ -483,12 +481,12 @@
         <p class="mvs-note">${escapeHtml(rc.workingGuideIntro(ownLabel))}</p>
         <div class="mvs-wwd-grid">
           ${others
-            .map((id) => {
-              const entry = guide[id];
-              const label = CONTENT.categoryContent[id].label;
+            .map((d) => {
+              const entry = guide[d];
+              const label = CONTENT.dimensionContent[d].label;
               return `
               <div class="mvs-wwd-card">
-                <div class="mvs-wwd-swatch mvs-wwd-swatch--${id}"></div>
+                <div class="mvs-wwd-swatch mvs-wwd-swatch--${d}"></div>
                 <h3>${escapeHtml(label)}</h3>
                 <p class="mvs-wwd-tagline">${escapeHtml(entry.tagline)}</p>
                 <ul class="mvs-list">
