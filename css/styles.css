@@ -2250,3 +2250,7 @@ h2 {
 .mvs-org-row-actions { display: flex; gap: 6px; flex-wrap: wrap; }
 .mvs-form-inline { display: flex; gap: 8px; align-items: stretch; }
 .mvs-form-inline .mvs-text-input { flex: 1; }
+
+/* Admin platform overview: two-column lists where there's room */
+.mvs-admin-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 0 20px; }
+@media (max-width: 560px) { .mvs-admin-cols { grid-template-columns: 1fr; } }

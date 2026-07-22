@@ -417,10 +417,165 @@
       teamCode: row.team_code,
       exportedAt: row.created_at,
     }));
-    renderAdmin(records, false);
+
+    // Platform data (organisations / users / memberships) — a platform
+    // administrator can read all of it via Row Level Security.
+    const [orgsRes, profRes, memRes] = await Promise.all([
+      SupabaseClient.select("organisations", "order=created_at.desc", accessToken),
+      SupabaseClient.select("profiles", "order=created_at.desc", accessToken),
+      SupabaseClient.select("memberships", "", accessToken),
+    ]);
+    const platform = {
+      organisations: orgsRes.ok ? orgsRes.data : [],
+      profiles: profRes.ok ? profRes.data : [],
+      memberships: memRes.ok ? memRes.data : [],
+      submissions: result.data,
+    };
+
+    root.innerHTML = `<div id="mvs-admin-platform"></div><div id="mvs-admin-subs"></div>`;
+    renderPlatformOverview(platform, document.getElementById("mvs-admin-platform"));
+    renderAdmin(records, false, document.getElementById("mvs-admin-subs"));
   }
 
-  function renderAdmin(initialRecords, loadError) {
+  /**
+   * The platform-administration overview: totals, newest & most-active
+   * organisations, and searchable users / organisations. Rendered above
+   * the existing submissions dashboard, into its own container so the
+   * submissions filter never wipes it.
+   */
+  function renderPlatformOverview(data, mount) {
+    if (!mount) return;
+    const pc = c.platform || {};
+    let userQuery = "";
+    let orgQuery = "";
+
+    const nonPersonalOrgs = data.organisations.filter((o) => !o.is_personal);
+    const everyday = data.submissions.filter((s) => (s.record_type || "everyday") !== "pressure").length;
+    const pressure = data.submissions.filter((s) => s.record_type === "pressure").length;
+
+    // Submissions per organisation → most active.
+    const byOrg = {};
+    data.submissions.forEach((s) => {
+      if (s.organisation_id) byOrg[s.organisation_id] = (byOrg[s.organisation_id] || 0) + 1;
+    });
+    const orgName = (id) => {
+      const o = data.organisations.find((x) => x.id === id);
+      return o ? o.name : "—";
+    };
+
+    function fmtDate(iso) {
+      if (!iso) return "—";
+      try {
+        return new Date(iso).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+      } catch (e) {
+        return String(iso).slice(0, 10);
+      }
+    }
+
+    function paint() {
+      const uq = userQuery.trim().toLowerCase();
+      const users = uq
+        ? data.profiles.filter(
+            (p) =>
+              (p.display_name || "").toLowerCase().includes(uq) ||
+              (p.email || "").toLowerCase().includes(uq)
+          )
+        : data.profiles.slice(0, 10);
+      const oq = orgQuery.trim().toLowerCase();
+      const orgs = oq
+        ? nonPersonalOrgs.filter((o) => (o.name || "").toLowerCase().includes(oq))
+        : nonPersonalOrgs.slice(0, 10);
+
+      const newest = nonPersonalOrgs.slice(0, 5);
+      const topActive = Object.keys(byOrg)
+        .map((id) => ({ id: id, count: byOrg[id] }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 5);
+
+      const tiles = [
+        [data.profiles.length, pc.statUsers || "Users"],
+        [nonPersonalOrgs.length, pc.statOrgs || "Organisations"],
+        [everyday, pc.statEveryday || "Communication profiles"],
+        [pressure, pc.statPressure || "Under-pressure profiles"],
+      ]
+        .map(([v, l]) => `<div class="mvs-stat"><div class="mvs-stat-value">${v}</div><div class="mvs-stat-label">${escapeHtml(l)}</div></div>`)
+        .join("");
+
+      mount.innerHTML = `
+        <div class="mvs-screen" style="padding-bottom:0;">
+          <h2 class="mvs-section-title" style="border-top:none;">${escapeHtml(pc.heading || "Platform overview")}</h2>
+          <div class="mvs-stat-row">${tiles}</div>
+
+          <div class="mvs-admin-cols">
+            <section class="mvs-section">
+              <h3 class="mvs-subheading">${escapeHtml(pc.newestHeading || "Newest organisations")}</h3>
+              ${
+                newest.length
+                  ? `<ul class="mvs-list">${newest
+                      .map((o) => `<li>${escapeHtml(o.name)} — ${escapeHtml(fmtDate(o.created_at))}</li>`)
+                      .join("")}</ul>`
+                  : `<p class="mvs-history-empty">${escapeHtml(pc.noOrgs || "No organisations yet.")}</p>`
+              }
+            </section>
+            <section class="mvs-section">
+              <h3 class="mvs-subheading">${escapeHtml(pc.topHeading || "Most active organisations")}</h3>
+              ${
+                topActive.length
+                  ? `<ul class="mvs-list">${topActive
+                      .map((t) => `<li>${escapeHtml(orgName(t.id))} — ${t.count}</li>`)
+                      .join("")}</ul>`
+                  : `<p class="mvs-history-empty">${escapeHtml(pc.noActivity || "No activity yet.")}</p>`
+              }
+            </section>
+          </div>
+
+          <section class="mvs-section">
+            <h3 class="mvs-subheading">${escapeHtml(pc.usersHeading || "Users")}</h3>
+            <input type="text" id="mvs-plat-user-q" class="mvs-text-input" placeholder="${escapeHtml(pc.userSearch || "Search users by name or email")}" value="${escapeHtml(userQuery)}" autocomplete="off" />
+            <table class="mvs-history-table">
+              <thead><tr><th>${escapeHtml(pc.colName || "Name")}</th><th>${escapeHtml(pc.colEmail || "Email")}</th><th>${escapeHtml(pc.colJoined || "Joined")}</th></tr></thead>
+              <tbody>${users
+                .map((p) => `<tr><td>${escapeHtml(p.display_name || "—")}</td><td>${escapeHtml(p.email || "—")}</td><td>${escapeHtml(fmtDate(p.created_at))}</td></tr>`)
+                .join("")}</tbody>
+            </table>
+          </section>
+
+          <section class="mvs-section">
+            <h3 class="mvs-subheading">${escapeHtml(pc.orgsHeading || "Organisations")}</h3>
+            <input type="text" id="mvs-plat-org-q" class="mvs-text-input" placeholder="${escapeHtml(pc.orgSearch || "Search organisations by name")}" value="${escapeHtml(orgQuery)}" autocomplete="off" />
+            <table class="mvs-history-table">
+              <thead><tr><th>${escapeHtml(pc.colOrg || "Organisation")}</th><th>${escapeHtml(pc.colCreated || "Created")}</th></tr></thead>
+              <tbody>${orgs
+                .map((o) => `<tr><td>${escapeHtml(o.name)}</td><td>${escapeHtml(fmtDate(o.created_at))}</td></tr>`)
+                .join("")}</tbody>
+            </table>
+          </section>
+        </div>
+      `;
+
+      const uInput = document.getElementById("mvs-plat-user-q");
+      uInput.addEventListener("input", () => {
+        userQuery = uInput.value;
+        paint();
+        const el = document.getElementById("mvs-plat-user-q");
+        el.focus();
+        el.setSelectionRange(el.value.length, el.value.length);
+      });
+      const oInput = document.getElementById("mvs-plat-org-q");
+      oInput.addEventListener("input", () => {
+        orgQuery = oInput.value;
+        paint();
+        const el = document.getElementById("mvs-plat-org-q");
+        el.focus();
+        el.setSelectionRange(el.value.length, el.value.length);
+      });
+    }
+
+    paint();
+  }
+
+  function renderAdmin(initialRecords, loadError, mount) {
+    mount = mount || root;
     let records = initialRecords.slice();
     let teamCodeFilter = "";
     let deleteError = false;
@@ -447,7 +602,7 @@
         : "";
       const shown = visibleRecords();
 
-      root.innerHTML = `
+      mount.innerHTML = `
         <div class="mvs-screen">
           <p class="mvs-eyebrow">${CONTENT.meta.shortName}</p>
           <a href="index.html" class="mvs-meta-line mvs-print-hide">&larr; Back to home</a>
@@ -514,9 +669,9 @@
 
       wireFileInput();
 
-      document.getElementById("mvs-admin-sign-out").addEventListener("click", () => {
-        clearSession();
-        renderGate();
+      document.getElementById("mvs-admin-sign-out").addEventListener("click", async () => {
+        if (typeof Auth !== "undefined") await Auth.signOut();
+        window.location.href = "index.html";
       });
 
       const filterInput = document.getElementById("mvs-admin-team-filter");
@@ -532,7 +687,7 @@
         filterInput.setSelectionRange(caret, caret);
       }
 
-      root.querySelectorAll(".mvs-admin-delete-btn").forEach((btn) => {
+      mount.querySelectorAll(".mvs-admin-delete-btn").forEach((btn) => {
         btn.addEventListener("click", async () => {
           const id = btn.getAttribute("data-id");
           const name = btn.getAttribute("data-name");
