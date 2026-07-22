@@ -217,7 +217,7 @@ body {
   overflow: hidden;
   background: var(--accent-deep);
   border-radius: 0 0 28px 28px;
-  padding: 24px 16px 32px;
+  padding: 18px 16px 20px; /* shorter hero — less empty blue */
 }
 
 .mvs-hero-shape {
@@ -239,17 +239,17 @@ body {
 }
 
 .mvs-hero-logo {
-  width: 66px;
+  width: 78px;
   height: auto;
   display: block;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 .mvs-hero-word {
   display: flex;
   flex-direction: column;
   line-height: 1.1;
-  margin-bottom: 18px;
+  margin-bottom: 12px;
 }
 
 .mvs-hero-word strong {
@@ -281,16 +281,19 @@ body {
 
 .mvs-hero-title {
   color: #ffffff;
-  font-size: 1.7rem;
-  font-weight: 800;
-  margin: 0 0 10px 0;
+  font-size: 2.05rem;
+  font-weight: 900;
+  line-height: 1.12;
+  letter-spacing: -0.01em;
+  margin: 0 0 8px 0;
+  max-width: 22ch;
 }
 
 .mvs-hero-lead {
   color: rgba(255, 255, 255, 0.9);
-  font-size: 1rem;
+  font-size: 1.02rem;
   margin: 0;
-  max-width: 46ch;
+  max-width: 52ch;
 }
 
 /* Admin entry point — a small, deliberately low-key pill in the top
@@ -2268,3 +2271,131 @@ h2 {
 }
 .mvs-tool-grid { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
 .mvs-about-row .mvs-section { border-top: none; padding-top: 0; }
+
+/* ===================================================================
+   Homepage — guided journey layout
+   =================================================================== */
+.mvs-home { padding-top: 18px; display: flex; flex-direction: column; gap: 26px; }
+
+/* Signed-in welcome strip */
+.mvs-home-welcome {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  background: var(--surface-card);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
+}
+.mvs-home-welcome strong { font-size: 1.05rem; }
+.mvs-home-welcome span { color: var(--text-secondary); }
+.mvs-home-continue { margin-left: auto; font-weight: 700; color: var(--accent-soft); text-decoration: none; }
+.mvs-home-continue:hover { text-decoration: underline; }
+
+/* Step sections */
+.mvs-home-step { display: flex; flex-direction: column; gap: 10px; }
+.mvs-step-eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--accent-soft);
+  margin: 0;
+}
+
+/* Step 1 — emphasised feature card */
+.mvs-feature-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  text-decoration: none;
+  color: var(--text-primary);
+  background: linear-gradient(180deg, var(--accent-light), var(--surface-card) 70%);
+  border: 2px solid var(--accent-soft);
+  border-radius: 16px;
+  padding: 24px 24px;
+  box-shadow: 0 6px 20px rgba(36, 86, 201, 0.12);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.mvs-feature-card:hover { transform: translateY(-2px); box-shadow: 0 12px 28px rgba(36, 86, 201, 0.18); }
+.mvs-feature-pill {
+  position: absolute;
+  top: -12px;
+  left: 20px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 4px 12px;
+  border-radius: 999px;
+}
+.mvs-feature-icon {
+  flex: none;
+  width: 72px;
+  height: 72px;
+  border-radius: 18px;
+  background: var(--accent-deep);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.mvs-feature-icon svg { width: 38px; height: 38px; }
+.mvs-feature-text { flex: 1; min-width: 0; }
+.mvs-feature-text h2 { margin: 0 0 4px; font-size: 1.35rem; font-weight: 800; }
+.mvs-feature-text p { margin: 0 0 8px; color: var(--text-secondary); }
+.mvs-feature-meta { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 0.85rem; }
+.mvs-feature-time { font-weight: 700; color: var(--text-primary); }
+.mvs-feature-time::before { content: "⏱ "; }
+.mvs-feature-required { color: var(--text-muted); }
+.mvs-feature-status { display: block; margin-top: 10px; }
+.mvs-feature-cta { flex: none; align-self: center; white-space: nowrap; }
+@media (max-width: 640px) {
+  .mvs-feature-card { flex-direction: column; align-items: flex-start; text-align: left; }
+  .mvs-feature-cta { align-self: stretch; text-align: center; }
+}
+
+/* Step 2 — three equal cards */
+.mvs-tool-grid--three { grid-template-columns: repeat(3, 1fr); }
+@media (max-width: 720px) { .mvs-tool-grid--three { grid-template-columns: 1fr; } }
+.mvs-tool-tile { position: relative; padding: 20px 16px; gap: 6px; }
+.mvs-tool-tile h3 { margin: 2px 0 0; }
+.mvs-tool-status { font-size: 0.78rem; color: var(--text-muted); margin-top: 4px; min-height: 1em; }
+
+/* Status badges */
+.mvs-status-badge {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: var(--border-hairline);
+  color: var(--text-secondary);
+}
+.mvs-status-badge--done { background: rgba(15, 122, 108, 0.16); color: var(--series-clarity); }
+.mvs-status-badge--lock { background: rgba(138, 83, 0, 0.14); color: var(--series-drive); }
+
+/* Info panels — identical cards */
+.mvs-home-info .mvs-about-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 14px;
+}
+@media (max-width: 720px) { .mvs-home-info .mvs-about-row { grid-template-columns: 1fr; } }
+.mvs-home-info .mvs-about-block {
+  background: var(--surface-card);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-md);
+  padding: 18px;
+  margin: 0;
+}
+.mvs-about-title { margin: 0 0 8px; font-size: 1rem; font-weight: 800; }
+.mvs-home-info .mvs-about-block p { margin: 0; color: var(--text-secondary); font-size: 0.92rem; }
+
+/* Honour the hidden attribute on the welcome strip + feature status
+   (the display rules above otherwise win on specificity). */
+.mvs-home-welcome[hidden] { display: none; }
+.mvs-feature-status[hidden] { display: none; }

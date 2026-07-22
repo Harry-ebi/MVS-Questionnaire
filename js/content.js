@@ -178,60 +178,71 @@ const CONTENT = {
   },
 
   home: {
-    title: "Conversa",
+    // Hero — short and direct.
+    title: "Understand how you communicate at work.",
     intro:
-      "Better workplace communication. Conversa helps you and your team understand your communication preferences and work together more effectively — no installs, nothing to set up. Try it straight away, or sign in to keep your profiles together.",
-    whatHeading: "What this is",
-    whatBody:
-      "Conversa is a communication tool for individuals and teams. It starts by helping you understand how you naturally communicate across three broad areas — Drive, Connection and Clarity — then turns that into practical, plain-English guidance for better conversations, plus a couple of ways to explore how a team communicates together.",
-    useHeading: "What it's for",
-    useBody:
-      "Use it to understand your own communication style, to see how a team's communication preferences fit together, or to run a light, low-pressure workshop on how well colleagues read each other. Every result is a starting point for a better conversation, not a verdict — most people draw on all three areas rather than sitting neatly in one box, and the balance shifts with role, team and circumstance.",
-    notHeading: "What it isn't",
-    notBody:
-      "Conversa is a practical communication tool, not a clinical or diagnostic one. It isn't affiliated with, endorsed by, or based on any commercial test, and it isn't designed or intended for hiring decisions, performance ratings, or any formal HR process — it's here to help people communicate more effectively, and every screen reflects that.",
-    cardsHeading: "My apps",
-    // Order matters here: communication profile is the primary/most-used tool
-    // (rendered as the larger, featured tile), then team insights, then
-    // the perception check. The communication guide isn't in this
-    // list at all — it's a different kind of thing (an anytime reference
-    // guide, not a run-through-once workflow), so it gets its own
-    // separately-styled banner via CONTENT.home.guideCard instead of
-    // living in this tile grid alongside the other three.
-    cards: [
-      {
-        title: "Communication profile",
-        body: "Discover how you naturally communicate — a quick 5–8 minute step, just for you. Start here.",
-        href: "reflection.html",
-        cta: "Discover your profile",
-        accent: "reflection",
-        icon: "reflection",
-      },
+      "Complete your profile in under 10 minutes, then explore how your team communicates together.",
+
+    // Signed-in welcome strip.
+    welcomeBack: (name) => `Welcome back${name ? ", " + name : ""}.`,
+    welcomeNoProfile: "Start with your communication profile below.",
+    welcomeWithProfile: (label) => `Your communication style: ${label}.`,
+    continueCta: "View your results →",
+
+    // Step 1 — the primary journey.
+    step1Eyebrow: "Start here",
+    featurePill: "Step 1",
+    featureTitle: "Complete your Communication Profile",
+    featureBody:
+      "Understand your natural workplace communication style across Drive, Connection and Clarity.",
+    featureTime: "About 5–8 minutes",
+    featureRequired: "Recommended before the other tools",
+    featureCta: "Start profile →",
+    featureRetakeCta: "Retake profile →",
+    featureHref: "reflection.html",
+    statusCompleted: "Completed",
+    statusNotStarted: "Not started",
+
+    // Step 2 — explore afterwards (three equal cards, incl. the guide).
+    step2Eyebrow: "Next, explore",
+    secondary: [
       {
         title: "Team insights",
-        body: "See how your team's communication preferences fit together on a single view.",
+        body: "See how your team's communication styles fit together on a single view.",
         href: "team.html",
-        cta: "Open team insights",
         accent: "team",
         icon: "team",
+        availabilityNote: "Best once your team has a few profiles",
       },
       {
         title: "Perception check",
-        body: "Guess how your teammates communicate, then compare with reality — a quick way to surface assumptions.",
+        body: "Guess how teammates communicate, then compare with reality.",
         href: "guess.html",
-        cta: "Start a perception check",
         accent: "blindspot",
         icon: "blindspot",
+        lockNote: "Complete your profile first",
+      },
+      {
+        title: "Communication guide",
+        body: "How to communicate with someone whose priorities lean differently from yours.",
+        href: "guide.html",
+        accent: "guide",
+        icon: "guide",
       },
     ],
-    guideCard: {
-      tag: "Reference guide — usable anytime",
-      title: "Communicating across different priorities",
-      body: "Not a one-off exercise like the tools above — a practical guide to communicating with someone whose priorities lean differently from your own, from any starting point (pick your style, place yourself on the chart, or load a saved file).",
-      href: "guide.html",
-      cta: "Open the guide",
-      icon: "guide",
-    },
+
+    // Info panels — trimmed to a few lines each, uniform.
+    infoHeading: "About Conversa",
+    whatHeading: "What this is",
+    whatBody:
+      "A communication tool for individuals and teams. It shows how you naturally communicate across Drive, Connection and Clarity, then turns that into plain-English guidance.",
+    useHeading: "What it's for",
+    useBody:
+      "Understand your own style, see how a team fits together, or run a light workshop on how well colleagues read each other. Every result is a starting point, not a verdict.",
+    notHeading: "What it isn't",
+    notBody:
+      "A practical communication aid — not a clinical, diagnostic or commercial test, and not for hiring, performance or any formal HR process.",
+
     adminLinkLabel: "Admin: view all submissions",
     adminLinkShort: "Admin",
     adminLinkHref: "admin.html",

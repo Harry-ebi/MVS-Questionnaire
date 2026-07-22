@@ -78,64 +78,130 @@
       document.getElementById("home-hero-title").textContent = c.title;
       document.getElementById("home-hero-lead").textContent = c.intro;
 
-      const [featuredCard, ...restCards] = c.cards;
+      function secondaryCard(card) {
+        return `
+          <a class="mvs-tool-tile mvs-tool-tile--${card.accent}" href="${card.href}">
+            <span class="mvs-tool-icon">${ICONS[card.icon] || ""}</span>
+            <h3>${card.title}</h3>
+            <p>${card.body}</p>
+            <span class="mvs-tool-status" data-card="${card.icon}"></span>
+          </a>`;
+      }
 
       const root = document.getElementById("home-app");
       root.innerHTML = `
-        <div class="mvs-screen">
-          <section class="mvs-section" style="border-top:none;padding-top:4px;">
-            <h2 class="mvs-section-title">${c.cardsHeading}</h2>
+        <div class="mvs-home">
+          <div id="home-welcome" class="mvs-home-welcome" hidden></div>
 
-            <a class="mvs-tool-tile mvs-tool-tile--featured mvs-tool-tile--${featuredCard.accent}" href="${featuredCard.href}">
-              <span class="mvs-tool-icon">${ICONS[featuredCard.icon] || ""}</span>
-              <span class="mvs-tool-featured-text">
-                <h3>${featuredCard.title}</h3>
-                <p>${featuredCard.body}</p>
+          <section class="mvs-home-step">
+            <p class="mvs-step-eyebrow">${c.step1Eyebrow}</p>
+            <a class="mvs-feature-card" href="${c.featureHref}" id="home-feature-card">
+              <span class="mvs-feature-pill">${c.featurePill}</span>
+              <span class="mvs-feature-icon">${ICONS.reflection}</span>
+              <span class="mvs-feature-text">
+                <h2>${c.featureTitle}</h2>
+                <p>${c.featureBody}</p>
+                <span class="mvs-feature-meta">
+                  <span class="mvs-feature-time">${c.featureTime}</span>
+                  <span class="mvs-feature-required">${c.featureRequired}</span>
+                </span>
+                <span class="mvs-feature-status" id="home-feature-status" hidden></span>
               </span>
-            </a>
-
-            <div class="mvs-tool-grid">
-              ${restCards
-                .map(
-                  (card) => `
-                <a class="mvs-tool-tile mvs-tool-tile--${card.accent}" href="${card.href}">
-                  <span class="mvs-tool-icon">${ICONS[card.icon] || ""}</span>
-                  <h3>${card.title}</h3>
-                  <p>${card.body}</p>
-                </a>
-              `
-                )
-                .join("")}
-            </div>
-
-            <a class="mvs-guide-banner" href="${c.guideCard.href}">
-              <span class="mvs-guide-banner-icon">${ICONS[c.guideCard.icon] || ""}</span>
-              <span class="mvs-guide-banner-text">
-                <span class="mvs-guide-banner-tag">${c.guideCard.tag}</span>
-                <h3>${c.guideCard.title}</h3>
-                <p>${c.guideCard.body}</p>
-              </span>
+              <span class="mvs-btn mvs-btn--primary mvs-feature-cta" id="home-feature-cta">${c.featureCta}</span>
             </a>
           </section>
 
-          <div class="mvs-about-row">
-            <section class="mvs-section mvs-about-block">
-              <h2 class="mvs-section-title">${c.whatHeading}</h2>
-              <p class="mvs-note">${c.whatBody}</p>
-            </section>
+          <section class="mvs-home-step">
+            <p class="mvs-step-eyebrow">${c.step2Eyebrow}</p>
+            <div class="mvs-tool-grid mvs-tool-grid--three">
+              ${c.secondary.map(secondaryCard).join("")}
+            </div>
+          </section>
 
-            <section class="mvs-section mvs-about-block">
-              <h2 class="mvs-section-title">${c.useHeading}</h2>
-              <p class="mvs-note">${c.useBody}</p>
-            </section>
-
-            <section class="mvs-section mvs-about-block mvs-about-block--not">
-              <h2 class="mvs-section-title">${c.notHeading}</h2>
-              <p class="mvs-note">${c.notBody}</p>
-            </section>
-          </div>
+          <section class="mvs-home-info">
+            <div class="mvs-about-row">
+              <div class="mvs-about-block">
+                <h3 class="mvs-about-title">${c.whatHeading}</h3>
+                <p>${c.whatBody}</p>
+              </div>
+              <div class="mvs-about-block">
+                <h3 class="mvs-about-title">${c.useHeading}</h3>
+                <p>${c.useBody}</p>
+              </div>
+              <div class="mvs-about-block">
+                <h3 class="mvs-about-title">${c.notHeading}</h3>
+                <p>${c.notBody}</p>
+              </div>
+            </div>
+          </section>
         </div>
       `;
+
+      // ---- Signed-in enhancement: greeting, profile status, style summary ----
+      function styleLabel(sub) {
+        const names = CONTENT.results.dimensionNames;
+        const dims = [["drive", sub.drive], ["connection", sub.connection], ["clarity", sub.clarity]].sort(
+          (a, b) => b[1] - a[1]
+        );
+        if (sub.pattern === "BALANCED") return "Balanced";
+        if (sub.pattern === "DUAL") return names[dims[0][0]] + " & " + names[dims[1][0]];
+        return names[dims[0][0]] + "-led";
+      }
+
+      async function enhanceForUser() {
+        try {
+          const token = await Auth.getAccessToken();
+          const user = Auth.currentUser();
+          if (!token || !user) return;
+          const ctx = await Auth.loadContext();
+          const nameFull = (ctx && ctx.profile && (ctx.profile.first_name || ctx.profile.display_name)) || "";
+          const firstName = nameFull.split(" ")[0];
+          const subRes = await SupabaseClient.select(
+            "submissions",
+            `user_id=eq.${user.id}&record_type=eq.everyday&order=created_at.desc`,
+            token
+          );
+          const subs = subRes.ok ? subRes.data : [];
+          const has = subs.length > 0;
+          const style = has ? styleLabel(subs[0]) : "";
+
+          const w = document.getElementById("home-welcome");
+          w.innerHTML = `
+            <strong>${c.welcomeBack(firstName)}</strong>
+            <span>${has ? c.welcomeWithProfile(style) : c.welcomeNoProfile}</span>
+            ${has ? `<a class="mvs-home-continue" href="account.html">${c.continueCta}</a>` : ""}
+          `;
+          w.hidden = false;
+
+          const st = document.getElementById("home-feature-status");
+          const featureCard = document.getElementById("home-feature-card");
+          const cta = document.getElementById("home-feature-cta");
+          if (has) {
+            st.innerHTML = `<span class="mvs-status-badge mvs-status-badge--done">${c.statusCompleted}</span>`;
+            featureCard.classList.add("is-complete");
+            cta.textContent = c.featureRetakeCta;
+          } else {
+            st.innerHTML = `<span class="mvs-status-badge">${c.statusNotStarted}</span>`;
+          }
+          st.hidden = false;
+
+          // Secondary statuses.
+          const teamNote = (c.secondary.find((s) => s.icon === "team") || {}).availabilityNote || "";
+          document.querySelectorAll('.mvs-tool-status[data-card="team"]').forEach((el) => {
+            el.textContent = teamNote;
+          });
+          if (!has) {
+            const lock = (c.secondary.find((s) => s.icon === "blindspot") || {}).lockNote || "";
+            document.querySelectorAll('.mvs-tool-status[data-card="blindspot"]').forEach((el) => {
+              el.innerHTML = `<span class="mvs-status-badge mvs-status-badge--lock">${lock}</span>`;
+            });
+          }
+        } catch (e) {
+          /* leave the brochure view as-is */
+        }
+      }
+
+      if (typeof Auth !== "undefined" && Auth.isSignedIn()) enhanceForUser();
     })();
   </script>
 </body>
