@@ -2060,15 +2060,14 @@ h2 {
   background: var(--surface-page);
   border-bottom: 1px solid var(--border-hairline);
 }
+/* Full-width bar: brand hard left, Account button hard right (where the
+   old admin pill lived), section links in between. */
 .mvs-topbar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   flex-wrap: wrap;
   gap: 8px 16px;
-  max-width: var(--max-width);
-  margin: 0 auto;
-  padding: 12px 20px;
+  padding: 12px clamp(16px, 4vw, 32px);
 }
 .mvs-topbar-brand {
   display: inline-flex;
@@ -2082,10 +2081,10 @@ h2 {
 /* Keep the bar clean — the tagline lives on the home hero, not up here. */
 .mvs-topbar-brand .mvs-brand-word span { display: none; }
 
-/* Right cluster: section links, burger (mobile), and the account button. */
-.mvs-topbar-right { display: flex; align-items: center; gap: 6px; }
 .mvs-topbar-nav { display: flex; align-items: center; }
 .mvs-nav-primary { display: flex; align-items: center; gap: 2px; flex-wrap: wrap; }
+/* Push the account control to the far right of the bar. */
+.mvs-account { margin-left: auto; }
 .mvs-topbar .mvs-nav-link {
   padding: 7px 9px;
   border-radius: var(--radius-sm);
@@ -2178,7 +2177,9 @@ h2 {
 
 /* Mobile: section links collapse into the burger; account button stays. */
 @media (max-width: 720px) {
-  .mvs-burger { display: inline-flex; }
+  /* Burger + Account grouped on the right; brand stays left. */
+  .mvs-burger { display: inline-flex; margin-left: auto; }
+  .mvs-account { margin-left: 6px; }
   /* The section links become a dropdown panel below the bar. */
   .mvs-topbar-nav {
     display: none;

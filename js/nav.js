@@ -102,22 +102,20 @@ const Nav = (function () {
           <span class="mvs-brand-word"><strong>Conversa</strong></span>
         </a>
 
-        <div class="mvs-topbar-right">
-          <nav class="mvs-topbar-nav" id="mvs-topnav" aria-label="Sections">
-            <div class="mvs-nav-primary">${links}</div>
-          </nav>
+        <nav class="mvs-topbar-nav" id="mvs-topnav" aria-label="Sections">
+          <div class="mvs-nav-primary">${links}</div>
+        </nav>
 
-          <button type="button" class="mvs-burger" id="mvs-burger" aria-label="${esc(c.menu || "Menu")}" aria-expanded="false" aria-controls="mvs-topnav">
-            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+        <button type="button" class="mvs-burger" id="mvs-burger" aria-label="${esc(c.menu || "Menu")}" aria-expanded="false" aria-controls="mvs-topnav">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+        </button>
+
+        <div class="mvs-account" id="mvs-account">
+          <button type="button" class="mvs-account-btn" id="mvs-account-btn" aria-haspopup="true" aria-expanded="false">
+            ${personIcon}<span class="mvs-account-btn-label">${esc(accountLabel)}</span>${caret}
           </button>
-
-          <div class="mvs-account" id="mvs-account">
-            <button type="button" class="mvs-account-btn" id="mvs-account-btn" aria-haspopup="true" aria-expanded="false">
-              ${personIcon}<span class="mvs-account-btn-label">${esc(accountLabel)}</span>${caret}
-            </button>
-            <div class="mvs-account-menu" id="mvs-account-menu" role="menu" hidden>
-              ${accountItems(active)}
-            </div>
+          <div class="mvs-account-menu" id="mvs-account-menu" role="menu" hidden>
+            ${accountItems(active)}
           </div>
         </div>
       </div>
