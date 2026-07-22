@@ -2046,3 +2046,100 @@ h2 {
   top: auto;
   right: auto;
 }
+
+/* -------------------------------------------------------------------
+   Unified app header (nav.js) — one bar on every page.
+   ------------------------------------------------------------------- */
+#mvs-header { position: sticky; top: 0; z-index: 20; }
+.mvs-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 10px 20px;
+  background: var(--surface-page);
+  border-bottom: 1px solid var(--border-hairline);
+}
+.mvs-topbar-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: inherit;
+}
+.mvs-topbar-brand .mvs-brand-mark { width: 32px; height: 32px; flex: none; }
+.mvs-topbar-brand .mvs-brand-word { display: flex; flex-direction: column; line-height: 1.05; }
+.mvs-topbar-brand .mvs-brand-word strong { font-size: 1.05rem; font-weight: 800; color: var(--text-primary); }
+.mvs-topbar-brand .mvs-brand-word span { font-size: 0.62rem; color: var(--text-muted); letter-spacing: 0.02em; }
+
+.mvs-topbar-nav { display: flex; align-items: center; gap: 6px 14px; flex-wrap: wrap; }
+.mvs-nav-primary, .mvs-nav-account { display: flex; align-items: center; gap: 4px 12px; flex-wrap: wrap; }
+.mvs-nav-account { padding-left: 6px; }
+
+.mvs-burger {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  padding: 5px;
+  cursor: pointer;
+}
+
+/* Breadcrumbs — deliberately quiet */
+.mvs-crumbs {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 6px 20px 0;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.mvs-crumbs a { color: var(--text-secondary); text-decoration: none; }
+.mvs-crumbs a:hover { color: var(--accent-soft); text-decoration: underline; }
+.mvs-crumbs [aria-current="page"] { color: var(--text-primary); font-weight: 600; }
+.mvs-crumb-sep { color: var(--text-muted); opacity: 0.7; }
+
+/* Mobile: collapse the links into the burger menu */
+@media (max-width: 720px) {
+  .mvs-burger { display: inline-flex; }
+  .mvs-topbar-brand .mvs-brand-word span { display: none; }
+  .mvs-topbar-nav {
+    display: none;
+    flex-basis: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    padding: 6px 0 2px;
+  }
+  .mvs-topbar.is-open .mvs-topbar-nav { display: flex; }
+  .mvs-nav-primary, .mvs-nav-account {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    gap: 0;
+  }
+  .mvs-nav-account { padding-left: 0; border-top: 1px solid var(--border-hairline); margin-top: 4px; padding-top: 4px; }
+  .mvs-topbar-nav .mvs-nav-link {
+    padding: 11px 4px;
+    width: 100%;
+    border-bottom: 1px solid var(--border-hairline);
+  }
+  .mvs-topbar-nav .mvs-nav-link.is-active { border-bottom: 1px solid var(--accent-soft); }
+  .mvs-topbar-nav .mvs-nav-link--cta { text-align: left; border-bottom: none; margin-top: 6px; }
+}
+
+/* Info message (e.g. the "update your account name?" prompt) */
+.mvs-message--info {
+  background: var(--accent-light);
+  border: 1px solid var(--accent-soft);
+  color: var(--text-primary);
+}
