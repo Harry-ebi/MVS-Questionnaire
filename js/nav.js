@@ -1,21 +1,23 @@
 /**
  * nav.js
  * -----------------------------------------------------------------------
- * THE single navigation header for every page in Conversa. One component,
- * used everywhere, so the app stops "kicking between" different header
- * styles. It renders:
+ * THE single navigation header for every page in Conversa.
  *
- *   - a top bar: the Conversa brand (links home) on the left, and the
- *     navigation links + account controls on the right;
- *   - a burger (☰) menu that the links collapse into on small screens;
- *   - a discreet breadcrumb row underneath (e.g. Home › Your account).
+ *   - Left: the Conversa brand (links home).
+ *   - Middle: the main section links (Home, Communication Profile,
+ *     Perception Check, Team Insights, Guide) — collapse into a burger (☰)
+ *     menu on small screens.
+ *   - Right: an "Account" button that opens a dropdown holding the
+ *     account-related items (Your account, Admin, Sign out — or Sign in /
+ *     Create account when signed out). These live under the account button
+ *     rather than cluttering the main menu.
+ *   - A discreet breadcrumb row underneath.
  *
- * It adapts to whether someone is signed in, and reveals the Admin link
- * only to a platform administrator (checked against the database, not
- * just hidden in the UI — the real protection is Row Level Security).
+ * The Admin item only appears for a platform administrator (checked
+ * against the database). The links shown are convenience only; the real
+ * protection is Row Level Security.
  *
- * Usage on a page:  Nav.mount({ active: "account", crumbs: [...] });
- * Labels come from CONTENT.nav so all copy stays in content.js.
+ * All labels come from CONTENT.nav.
  * -----------------------------------------------------------------------
  */
 
@@ -26,7 +28,6 @@ const Nav = (function () {
     });
   }
 
-  // The Conversa brand mark, identical to the one used across the site.
   const LOGO = `
     <svg class="mvs-brand-mark" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Conversa logo">
       <path class="cv-arc cv-arc--navy" stroke-width="7" d="M12,26 A21,21 0 0 1 50,21" />
@@ -38,8 +39,6 @@ const Nav = (function () {
       <circle class="cv-dot" cx="41" cy="31" r="3.1" />
     </svg>`;
 
-  // The primary destinations, in order. All of these pages exist and work
-  // for both signed-in and anonymous visitors.
   function primaryLinks() {
     const c = (typeof CONTENT !== "undefined" && CONTENT.nav) || {};
     return [
@@ -55,23 +54,24 @@ const Nav = (function () {
     return `<a class="mvs-nav-link${l.key === active ? " is-active" : ""}" href="${l.href}">${esc(l.label)}</a>`;
   }
 
-  function accountHtml(active) {
+  // The items inside the account dropdown.
+  function accountItems(active) {
     const c = (typeof CONTENT !== "undefined" && CONTENT.nav) || {};
     const signedIn = typeof Auth !== "undefined" && Auth.isSignedIn();
     if (signedIn) {
       return `
-        <a class="mvs-nav-link${active === "account" ? " is-active" : ""}" href="account.html">${esc(c.account || "Account")}</a>
-        <button type="button" id="mvs-nav-signout" class="mvs-nav-link mvs-nav-link--button">${esc(c.signOut || "Sign out")}</button>
+        <a class="mvs-account-item${active === "account" ? " is-active" : ""}" href="account.html">${esc(c.account || "Your account")}</a>
+        <button type="button" id="mvs-nav-signout" class="mvs-account-item mvs-account-item--button">${esc(c.signOut || "Sign out")}</button>
       `;
     }
     return `
-      <a class="mvs-nav-link${active === "login" ? " is-active" : ""}" href="login.html">${esc(c.signIn || "Sign in")}</a>
-      <a class="mvs-nav-link mvs-nav-link--cta" href="register.html">${esc(c.register || "Create account")}</a>
+      <a class="mvs-account-item${active === "login" ? " is-active" : ""}" href="login.html">${esc(c.signIn || "Sign in")}</a>
+      <a class="mvs-account-item" href="register.html">${esc(c.register || "Create account")}</a>
     `;
   }
 
   function crumbsHtml(crumbs) {
-    if (!crumbs || crumbs.length < 2) return ""; // nothing useful to show on the home page
+    if (!crumbs || crumbs.length < 2) return "";
     const parts = crumbs.map((cr, i) => {
       const last = i === crumbs.length - 1;
       if (last || !cr.href) return `<span aria-current="page">${esc(cr.label)}</span>`;
@@ -87,37 +87,84 @@ const Nav = (function () {
     if (!el) return;
     const active = options.active || "";
     const c = (typeof CONTENT !== "undefined" && CONTENT.nav) || {};
+    const signedIn = typeof Auth !== "undefined" && Auth.isSignedIn();
 
     const links = primaryLinks().map((l) => linkHtml(l, active)).join("");
+    const accountLabel = signedIn ? c.account || "Account" : c.accountMenu || "Account";
+
+    const personIcon = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>`;
+    const caret = `<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>`;
 
     el.innerHTML = `
       <div class="mvs-topbar">
         <a class="mvs-topbar-brand" href="index.html" aria-label="Conversa home">
           ${LOGO}
-          <span class="mvs-brand-word"><strong>Conversa</strong><span>Better workplace communication</span></span>
+          <span class="mvs-brand-word"><strong>Conversa</strong></span>
         </a>
-        <button type="button" class="mvs-burger" id="mvs-burger" aria-label="${esc(c.menu || "Menu")}" aria-expanded="false" aria-controls="mvs-topnav">
-          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
-        </button>
-        <nav class="mvs-topbar-nav" id="mvs-topnav" aria-label="Primary">
-          <div class="mvs-nav-primary">${links}</div>
-          <div class="mvs-nav-account" id="mvs-nav-account">${accountHtml(active)}</div>
-        </nav>
+
+        <div class="mvs-topbar-right">
+          <nav class="mvs-topbar-nav" id="mvs-topnav" aria-label="Sections">
+            <div class="mvs-nav-primary">${links}</div>
+          </nav>
+
+          <button type="button" class="mvs-burger" id="mvs-burger" aria-label="${esc(c.menu || "Menu")}" aria-expanded="false" aria-controls="mvs-topnav">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+          </button>
+
+          <div class="mvs-account" id="mvs-account">
+            <button type="button" class="mvs-account-btn" id="mvs-account-btn" aria-haspopup="true" aria-expanded="false">
+              ${personIcon}<span class="mvs-account-btn-label">${esc(accountLabel)}</span>${caret}
+            </button>
+            <div class="mvs-account-menu" id="mvs-account-menu" role="menu" hidden>
+              ${accountItems(active)}
+            </div>
+          </div>
+        </div>
       </div>
       ${crumbsHtml(options.crumbs)}
     `;
 
-    // Burger toggle
-    const burger = document.getElementById("mvs-burger");
     const topbar = el.querySelector(".mvs-topbar");
+    const burger = document.getElementById("mvs-burger");
+    const accountBtn = document.getElementById("mvs-account-btn");
+    const accountMenu = document.getElementById("mvs-account-menu");
+
+    // Burger toggles the section links on mobile.
     if (burger && topbar) {
-      burger.addEventListener("click", () => {
+      burger.addEventListener("click", (e) => {
+        e.stopPropagation();
         const open = topbar.classList.toggle("is-open");
         burger.setAttribute("aria-expanded", open ? "true" : "false");
+        closeAccount();
       });
     }
 
-    // Sign out
+    function openAccount() {
+      accountMenu.hidden = false;
+      accountBtn.setAttribute("aria-expanded", "true");
+    }
+    function closeAccount() {
+      if (!accountMenu) return;
+      accountMenu.hidden = true;
+      accountBtn.setAttribute("aria-expanded", "false");
+    }
+    if (accountBtn && accountMenu) {
+      accountBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (accountMenu.hidden) openAccount();
+        else closeAccount();
+        if (topbar) topbar.classList.remove("is-open");
+      });
+      // Close on outside click / Escape.
+      document.addEventListener("click", (e) => {
+        if (!accountMenu.hidden && !el.querySelector(".mvs-account").contains(e.target)) closeAccount();
+      });
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") closeAccount();
+      });
+    }
+
+    // Sign out.
     const signout = document.getElementById("mvs-nav-signout");
     if (signout) {
       signout.addEventListener("click", async () => {
@@ -127,20 +174,17 @@ const Nav = (function () {
       });
     }
 
-    // Reveal the Admin link only for a platform administrator (async check).
-    if (typeof Auth !== "undefined" && Auth.isSignedIn()) {
+    // Reveal Admin inside the account dropdown, only for a platform admin.
+    if (signedIn && typeof Auth !== "undefined") {
       Auth.loadContext()
         .then((ctx) => {
-          if (ctx && ctx.profile && ctx.profile.is_platform_admin) {
-            const acc = document.getElementById("mvs-nav-account");
-            if (acc && !document.getElementById("mvs-nav-admin")) {
-              const a = document.createElement("a");
-              a.id = "mvs-nav-admin";
-              a.className = "mvs-nav-link" + (active === "admin" ? " is-active" : "");
-              a.href = "admin.html";
-              a.textContent = c.admin || "Admin";
-              acc.insertBefore(a, acc.firstChild);
-            }
+          if (ctx && ctx.profile && ctx.profile.is_platform_admin && accountMenu && !document.getElementById("mvs-nav-admin")) {
+            const a = document.createElement("a");
+            a.id = "mvs-nav-admin";
+            a.className = "mvs-account-item" + (active === "admin" ? " is-active" : "");
+            a.href = "admin.html";
+            a.textContent = c.admin || "Admin";
+            accountMenu.insertBefore(a, accountMenu.firstChild);
           }
         })
         .catch(() => {});

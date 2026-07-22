@@ -53,51 +53,26 @@
     }
   }
 
-  function renderGate(errorMessage) {
+  /**
+   * Access is now tied to the signed-in account: only a platform
+   * administrator (profiles.is_platform_admin) sees the dashboard. There
+   * is no separate admin password any more. This screen is shown when the
+   * visitor isn't signed in (offer sign-in) or isn't a platform admin.
+   */
+  function renderDenied(message, showSignIn) {
     root.innerHTML = `
       <div class="mvs-screen">
         <p class="mvs-eyebrow">${CONTENT.meta.shortName}</p>
-        <a href="index.html" class="mvs-meta-line">&larr; Back to home</a>
-        <h1>${escapeHtml(c.loginHeading)}</h1>
+        <h1>${escapeHtml(c.deniedHeading)}</h1>
         <div class="mvs-callout"><p>${escapeHtml(c.internalUseNotice)}</p></div>
-        <p class="mvs-lead">${escapeHtml(c.loginBody)}</p>
-        <form id="mvs-admin-gate-form" novalidate>
-          <label class="mvs-field-label" for="mvs-admin-email">${escapeHtml(c.emailLabel)}</label>
-          <input type="email" id="mvs-admin-email" class="mvs-text-input" placeholder="${escapeHtml(
-            c.emailPlaceholder
-          )}" autocomplete="username" />
-          <label class="mvs-field-label" for="mvs-admin-password">${escapeHtml(c.passwordLabel)}</label>
-          <input type="password" id="mvs-admin-password" class="mvs-text-input" placeholder="${escapeHtml(
-            c.passwordPlaceholder
-          )}" autocomplete="current-password" />
-          <p class="mvs-note" id="mvs-admin-gate-error" hidden></p>
-          <button type="submit" class="mvs-btn mvs-btn--primary">${escapeHtml(c.loginCta)}</button>
-        </form>
+        <p class="mvs-lead">${escapeHtml(message || c.deniedBody)}</p>
+        ${
+          showSignIn
+            ? `<a class="mvs-btn mvs-btn--primary" href="login.html?next=admin.html">${escapeHtml(c.signInCta)}</a>`
+            : `<a class="mvs-btn mvs-btn--ghost" href="index.html">${escapeHtml(c.backHome)}</a>`
+        }
       </div>
     `;
-
-    const errorNote = document.getElementById("mvs-admin-gate-error");
-    if (errorMessage) {
-      errorNote.hidden = false;
-      errorNote.textContent = errorMessage;
-    }
-
-    document.getElementById("mvs-admin-gate-form").addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const email = document.getElementById("mvs-admin-email").value.trim();
-      const password = document.getElementById("mvs-admin-password").value;
-      if (typeof SupabaseClient === "undefined") {
-        renderGate("Couldn't reach the shared database just now — try again in a moment.");
-        return;
-      }
-      const session = await SupabaseClient.signIn(email, password);
-      if (!session || !session.access_token) {
-        renderGate(c.loginError);
-        return;
-      }
-      setSession(session);
-      loadAndRenderAdmin(session.access_token);
-    });
   }
 
   function readFileAsJson(file) {
@@ -424,8 +399,7 @@
       // the page just re-sends the same expired token and fails again.
       // Clear the stale session and send the person back to sign in.
       if (result.status === 401 || result.status === 403) {
-        clearSession();
-        renderGate(c.sessionExpiredNotice);
+        renderDenied(c.sessionExpiredNotice, true);
         return;
       }
       renderAdmin([], true);
@@ -563,8 +537,8 @@
           const id = btn.getAttribute("data-id");
           const name = btn.getAttribute("data-name");
           if (!window.confirm(c.deleteConfirm(name))) return;
-          const session = getSession();
-          const accessToken = session && session.access_token;
+          const accessToken =
+            typeof Auth !== "undefined" ? await Auth.getAccessToken() : null;
           btn.disabled = true;
           const result =
             accessToken && typeof SupabaseClient !== "undefined"
@@ -574,8 +548,7 @@
             records = records.filter((r) => r.id !== id);
             deleteError = false;
           } else if (result.status === 401 || result.status === 403) {
-            clearSession();
-            renderGate(c.sessionExpiredNotice);
+            renderDenied(c.sessionExpiredNotice, true);
             return;
           } else {
             deleteError = true;
@@ -650,10 +623,21 @@
     paint([]);
   }
 
-  const existingSession = getSession();
-  if (existingSession && existingSession.access_token) {
-    loadAndRenderAdmin(existingSession.access_token);
-  } else {
-    renderGate();
-  }
+  (async function boot() {
+    if (typeof Auth === "undefined") {
+      renderDenied(c.deniedBody, true);
+      return;
+    }
+    const token = await Auth.getAccessToken();
+    if (!token) {
+      renderDenied(c.signInPrompt, true);
+      return;
+    }
+    const ctx = await Auth.loadContext();
+    if (!ctx || !ctx.profile || !ctx.profile.is_platform_admin) {
+      renderDenied(c.notAuthorised, false);
+      return;
+    }
+    loadAndRenderAdmin(token);
+  })();
 })();

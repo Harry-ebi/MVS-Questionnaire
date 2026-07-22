@@ -148,9 +148,7 @@
       .map(
         (opt, i) => `
           <button type="button" class="mvs-type-btn" data-index="${i}">
-            <span class="mvs-wwd-swatch-row">${opt.swatch
-              .map((d) => `<span class="mvs-wwd-swatch mvs-wwd-swatch--${d}"></span>`)
-              .join("")}</span>
+            <span class="mvs-wwd-swatch mvs-wwd-swatch--${swatchClass(opt.swatch)}"></span>
             <span class="mvs-type-btn-label">${escapeHtml(opt.label)}</span>
             <span class="mvs-type-btn-tagline">${escapeHtml(opt.tagline)}</span>
           </button>
@@ -190,7 +188,7 @@
     document.getElementById("mvs-triangle-confirm").addEventListener("click", () => {
       const pct = handle.getPercentages();
       const pattern = currentPattern(pct);
-      renderGuide(pattern, c.sourceTriangle(pct.drive, pct.connection, pct.clarity));
+      renderGuide(pattern, c.sourceTriangle(pct.drive, pct.connection, pct.clarity), pct);
     });
   }
 
@@ -213,7 +211,7 @@
       }
       errorNote.hidden = true;
       const pattern = derivePattern(rankDimensions(data.percentages));
-      renderGuide(pattern, c.sourceUpload(data.name));
+      renderGuide(pattern, c.sourceUpload(data.name), data.percentages);
     });
   }
 
@@ -230,6 +228,33 @@
   // The people you might be communicating with: each single priority, each
   // dual-led blend, and a balanced profile — so the guide covers blended
   // people, not just single-driver ones.
+  // Map a set of dimensions to the existing swatch class: a single colour
+  // for one, or the ready-made gradient classes (drive_clarity etc.) for
+  // blends, and the tri-colour "balanced" gradient for all three.
+  function swatchClass(dims) {
+    if (!dims || dims.length === 1) return dims ? dims[0] : "balanced";
+    if (dims.length === 2) return orderedPairKey(dims[0], dims[1]);
+    return "balanced";
+  }
+
+  // A representative placement for a chosen pattern, used to draw the
+  // reader's triangle when we only know their pattern (the "pick" method)
+  // rather than exact percentages (triangle / uploaded result).
+  function representativePercentages(pattern) {
+    const dims = CommsGuidance.meDims(pattern);
+    const pct = { drive: 0, connection: 0, clarity: 0 };
+    if (dims.length === 1) {
+      dimOrder.forEach((d) => (pct[d] = d === dims[0] ? 60 : 20));
+    } else if (dims.length === 2) {
+      dimOrder.forEach((d) => (pct[d] = dims.indexOf(d) !== -1 ? 45 : 10));
+    } else {
+      pct.drive = 34;
+      pct.connection = 33;
+      pct.clarity = 33;
+    }
+    return pct;
+  }
+
   function buildTargets() {
     const singles = dimOrder.map((d) => ({ dims: [d], label: CONTENT.dimensionContent[d].label }));
     const pairs = [
@@ -248,19 +273,21 @@
     return singles.concat(duals, [balanced]);
   }
 
-  function renderGuide(pattern, sourceLine) {
+  function renderGuide(pattern, sourceLine, percentages) {
     const overview = contentForPattern(pattern);
     // Blend-aware label: "Drive-led", "Drive & Clarity" or "balanced".
     const meLabel = CommsGuidance.meBlendLabel(pattern, dimNames);
     const cards = CommsGuidance.buildAllGuidance(pattern, buildTargets(), dimNames);
+    // Exact placement when we have it (triangle / uploaded result), else a
+    // representative placement for the chosen pattern.
+    const isExact = !!percentages;
+    const pct = percentages || representativePercentages(pattern);
 
     const cardsHtml = cards
       .map(
         (card) => `
           <div class="mvs-wwd-card mvs-commguide-card">
-            <div class="mvs-wwd-swatch-row">${(card.dims || [])
-              .map((d) => `<span class="mvs-wwd-swatch mvs-wwd-swatch--${d}"></span>`)
-              .join("")}</div>
+            <div class="mvs-wwd-swatch mvs-wwd-swatch--${swatchClass(card.dims)}"></div>
             <h3>${escapeHtml(card.heading)}</h3>
             <p class="mvs-commguide-field-label">${escapeHtml(c.approachLabel)}</p>
             <ul class="mvs-list">
@@ -284,6 +311,10 @@
 
         <section class="mvs-section">
           <p class="mvs-note">${escapeHtml(sourceLine)}</p>
+          <div id="mvs-guide-triangle-result" class="mvs-guide-triangle-result"></div>
+          <p class="mvs-note mvs-guide-triangle-caption">${escapeHtml(
+            isExact ? c.triangleCaptionExact : c.triangleCaptionApprox(meLabel)
+          )}</p>
           <button type="button" class="mvs-btn mvs-btn--ghost mvs-print-hide" id="mvs-guide-restart">${escapeHtml(
             c.changeStartCta
           )}</button>
@@ -321,6 +352,11 @@
         <p class="mvs-note mvs-print-hide">${escapeHtml(c.exportNote)}</p>
       </div>
     `;
+
+    const triContainer = document.getElementById("mvs-guide-triangle-result");
+    if (triContainer && typeof renderResultsChart === "function") {
+      renderResultsChart(triContainer, pct, dimNames);
+    }
 
     document.getElementById("mvs-guide-restart").addEventListener("click", renderSelector);
     document.getElementById("mvs-guide-export-pdf").addEventListener("click", () => window.print());

@@ -2050,7 +2050,16 @@ h2 {
 /* -------------------------------------------------------------------
    Unified app header (nav.js) — one bar on every page.
    ------------------------------------------------------------------- */
-#mvs-header { position: sticky; top: 0; z-index: 20; }
+/* The whole header is sticky and has a SOLID background + bottom border,
+   so page content scrolls underneath it cleanly instead of bleeding
+   through (which made the breadcrumb look like it overhung the text). */
+#mvs-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--surface-page);
+  border-bottom: 1px solid var(--border-hairline);
+}
 .mvs-topbar {
   display: flex;
   align-items: center;
@@ -2059,25 +2068,84 @@ h2 {
   gap: 8px 16px;
   max-width: var(--max-width);
   margin: 0 auto;
-  padding: 10px 20px;
-  background: var(--surface-page);
-  border-bottom: 1px solid var(--border-hairline);
+  padding: 12px 20px;
 }
 .mvs-topbar-brand {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 9px;
   text-decoration: none;
   color: inherit;
 }
-.mvs-topbar-brand .mvs-brand-mark { width: 32px; height: 32px; flex: none; }
-.mvs-topbar-brand .mvs-brand-word { display: flex; flex-direction: column; line-height: 1.05; }
-.mvs-topbar-brand .mvs-brand-word strong { font-size: 1.05rem; font-weight: 800; color: var(--text-primary); }
-.mvs-topbar-brand .mvs-brand-word span { font-size: 0.62rem; color: var(--text-muted); letter-spacing: 0.02em; }
+.mvs-topbar-brand .mvs-brand-mark { width: 30px; height: 30px; flex: none; }
+.mvs-topbar-brand .mvs-brand-word strong { font-size: 1.1rem; font-weight: 800; color: var(--text-primary); letter-spacing: -0.01em; }
+/* Keep the bar clean — the tagline lives on the home hero, not up here. */
+.mvs-topbar-brand .mvs-brand-word span { display: none; }
 
-.mvs-topbar-nav { display: flex; align-items: center; gap: 6px 14px; flex-wrap: wrap; }
-.mvs-nav-primary, .mvs-nav-account { display: flex; align-items: center; gap: 4px 12px; flex-wrap: wrap; }
-.mvs-nav-account { padding-left: 6px; }
+/* Right cluster: section links, burger (mobile), and the account button. */
+.mvs-topbar-right { display: flex; align-items: center; gap: 6px; }
+.mvs-topbar-nav { display: flex; align-items: center; }
+.mvs-nav-primary { display: flex; align-items: center; gap: 2px; flex-wrap: wrap; }
+.mvs-topbar .mvs-nav-link {
+  padding: 7px 9px;
+  border-radius: var(--radius-sm);
+  border-bottom: none;
+}
+.mvs-topbar .mvs-nav-link:hover { background: var(--accent-light); color: var(--accent-deep); }
+.mvs-topbar .mvs-nav-link.is-active {
+  color: var(--accent-soft);
+  border-bottom: 2px solid var(--accent-soft);
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+}
+
+/* Account button + dropdown (top right) */
+.mvs-account { position: relative; }
+.mvs-account-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: inherit;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  background: var(--surface-card);
+  border: 1px solid var(--border-hairline);
+  border-radius: 999px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+.mvs-account-btn:hover { border-color: var(--accent-soft); color: var(--accent-soft); }
+.mvs-account-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 180px;
+  background: var(--surface-card);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
+  padding: 6px;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+}
+.mvs-account-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 9px 12px;
+  text-decoration: none;
+  cursor: pointer;
+}
+.mvs-account-item:hover { background: var(--accent-light); color: var(--accent-deep); }
+.mvs-account-item.is-active { color: var(--accent-soft); }
 
 .mvs-burger {
   display: none;
@@ -2091,11 +2159,11 @@ h2 {
   cursor: pointer;
 }
 
-/* Breadcrumbs — deliberately quiet */
+/* Breadcrumbs — deliberately quiet, with clear space above the body text */
 .mvs-crumbs {
   max-width: var(--max-width);
   margin: 0 auto;
-  padding: 6px 20px 0;
+  padding: 2px 20px 10px;
   font-size: 0.78rem;
   color: var(--text-muted);
   display: flex;
@@ -2108,33 +2176,40 @@ h2 {
 .mvs-crumbs [aria-current="page"] { color: var(--text-primary); font-weight: 600; }
 .mvs-crumb-sep { color: var(--text-muted); opacity: 0.7; }
 
-/* Mobile: collapse the links into the burger menu */
+/* Mobile: section links collapse into the burger; account button stays. */
 @media (max-width: 720px) {
   .mvs-burger { display: inline-flex; }
-  .mvs-topbar-brand .mvs-brand-word span { display: none; }
+  /* The section links become a dropdown panel below the bar. */
   .mvs-topbar-nav {
     display: none;
-    flex-basis: 100%;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0;
-    padding: 6px 0 2px;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--surface-page);
+    border-bottom: 1px solid var(--border-hairline);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    padding: 4px 16px 8px;
   }
-  .mvs-topbar.is-open .mvs-topbar-nav { display: flex; }
-  .mvs-nav-primary, .mvs-nav-account {
+  .mvs-topbar { position: relative; }
+  .mvs-topbar.is-open .mvs-topbar-nav { display: block; }
+  .mvs-nav-primary {
     flex-direction: column;
     align-items: stretch;
     width: 100%;
     gap: 0;
   }
-  .mvs-nav-account { padding-left: 0; border-top: 1px solid var(--border-hairline); margin-top: 4px; padding-top: 4px; }
-  .mvs-topbar-nav .mvs-nav-link {
-    padding: 11px 4px;
+  .mvs-topbar .mvs-nav-link {
+    padding: 12px 6px;
     width: 100%;
+    border-radius: 0;
     border-bottom: 1px solid var(--border-hairline);
   }
-  .mvs-topbar-nav .mvs-nav-link.is-active { border-bottom: 1px solid var(--accent-soft); }
-  .mvs-topbar-nav .mvs-nav-link--cta { text-align: left; border-bottom: none; margin-top: 6px; }
+  .mvs-topbar .mvs-nav-link:last-child { border-bottom: none; }
+  .mvs-topbar .mvs-nav-link.is-active {
+    border-bottom: 1px solid var(--accent-soft);
+    background: var(--accent-light);
+  }
 }
 
 /* Info message (e.g. the "update your account name?" prompt) */
@@ -2146,3 +2221,7 @@ h2 {
 
 /* Guide: row of colour swatches for blended (multi-priority) cards */
 .mvs-wwd-swatch-row { display: inline-flex; gap: 4px; align-items: center; }
+
+/* Guide result: the reader's own triangle */
+.mvs-guide-triangle-result { max-width: 320px; margin: 6px auto 2px; }
+.mvs-guide-triangle-caption { text-align: center; margin-top: 0; }

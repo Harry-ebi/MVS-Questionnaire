@@ -238,6 +238,13 @@ const CONTENT = {
       "For internal use only. This tool is an educational communication aid, not a diagnostic tool — please don't use anything in this table to make hiring, promotion, performance or disciplinary decisions, and don't forward it outside the people directly involved without their knowledge.",
     loginHeading: "Admin sign-in",
     loginBody: "Sign in with the admin email and password set up for this tool.",
+    // Access is now tied to the signed-in account (platform administrators).
+    deniedHeading: "Platform administration",
+    deniedBody: "This area is for platform administrators.",
+    signInPrompt: "Please sign in with your account to continue.",
+    notAuthorised: "You're signed in, but this account isn't a platform administrator, so this area isn't available to you.",
+    signInCta: "Sign in",
+    backHome: "Back to home",
     emailLabel: "Email",
     emailPlaceholder: "you@example.com",
     passwordLabel: "Password",
@@ -1615,6 +1622,9 @@ const CONTENT = {
     methodUploadButtonLabel: "Choose result file…",
     methodUploadInvalid: "That doesn't look like a Conversa result file — try another, or use one of the other two options above.",
     resultHeading: (label) => `Working from a ${label} starting point`,
+    triangleCaptionExact: "Where you sit across Drive, Connection and Clarity.",
+    triangleCaptionApprox: (label) =>
+      `A representative placement for a ${label} pattern — complete the communication profile for your exact position.`,
     sourcePick: "You told us your result directly.",
     sourceTriangle: (drive, connection, clarity) =>
       `Based on where you placed yourself (Drive ${drive}% · Connection ${connection}% · Clarity ${clarity}%).`,
