@@ -360,33 +360,36 @@ const CONTENT = {
 
   team: {
     title: "Team insights",
-    intro:
-      "Each person completes the communication profile on their own device and enters a shared team code when asked for their name. Come back here, type that same code, and everyone who used it appears on the overlay automatically — no files to collect.",
-    howItWorksHeading: "How to run this with your team",
-    howItWorksSteps: [
-      "Agree a short team code with your group beforehand — anything memorable, e.g. ATLAS7.",
-      "Send everyone the communication profile page (index.html) and ask them to complete it, entering that code when asked for their name.",
-      "Come back to this page, type the same code below, and click “Load team” — everyone who used it appears on the overlay automatically.",
-      "Didn't use a team code, or prefer the old way? Everyone can still save and share a result file instead — see “Load from files” further down.",
-    ],
-    codeHeading: "Load your team by code",
-    codeLabel: "Team code",
-    codePlaceholder: "e.g. ATLAS7",
-    codeCta: "Load team",
-    codeEmptyError: "Type the team code your facilitator shared with you.",
-    codeErrorNote:
-      "Couldn't reach the shared database just now — try again in a moment, or use “Load from files” below instead.",
-    codeNoResultsNote: (code) =>
-      `No results found yet for team code "${code}". Double-check the code, or ask your teammates to make sure they entered it when they saved their result.`,
-    loadHeading: "Or load from files instead",
+    // Copy for the org-based team view (see js/team.js). The team is your
+    // organisation's members — loaded automatically; there's no code to share.
+    orgLoading: "Loading your team…",
+    orgHeading: "Your team",
+    orgLoadedNote: (n) =>
+      `Showing ${n} team member${n === 1 ? "" : "s"} who ${n === 1 ? "has" : "have"} completed a communication profile.`,
+    orgEmptyNote:
+      "No one in your organisation has completed a communication profile yet. As your team completes theirs, they'll appear here automatically.",
+    orgPendingNote: (n) =>
+      `${n} more ${n === 1 ? "person hasn't" : "people haven't"} completed a profile yet — they'll join the overlay once they do.`,
+    orgSignedOutHeading: "Sign in to see your team",
+    orgSignedOutBody:
+      "Team insights show everyone in your organisation on one overlay. Sign in with your account to load your team automatically.",
+    signInCta: "Sign in",
+    orgPersonalBody:
+      "You're in your personal workspace, so there's no team to show here. Switch to an organisation you administer from your account — or load individual result files below.",
+    orgNotAdminBody:
+      "Team insights are managed by your organisation's administrator. You can still build an overlay from individual result files below.",
+    orgErrorNote:
+      "Couldn't load your team from the database just now. You can still load individual result files below.",
+    loadHeading: "Add people from outside your organisation",
     loadIntro:
-      "Prefer not to use a team code, or working with older result files? Load everyone's saved result-*.json files here the same way as before.",
+      "Working with people who don't have an account — contractors, a cross-company group, or a one-off workshop? Load their saved result files here and they'll be added to the overlay alongside your team. Nothing is uploaded; the files are read only in your browser.",
     loadButtonLabel: "Choose result files…",
     loadHint: "Select all the result-*.json files at once (hold Ctrl/Cmd to multi-select).",
     overlayHeading: "Team insights",
-    overlayEmpty: "No results loaded yet — enter a team code above, or load result files below, to see the overlay.",
+    overlayEmpty:
+      "No profiles to show yet — as your team completes their communication profiles they'll appear here automatically. You can also add result files below.",
     privacyNote:
-      "Everyone whose file you load here can see everyone else's name and result in this overlay, once you show it to them. Make sure your team is comfortable with that before collecting these files — nothing is shared beyond your own browser unless someone chooses to save and hand over a result file. Nothing is uploaded anywhere by this page — the files are only read inside your own browser.",
+      "Everyone shown on this overlay can see everyone else's name and result once you present it. Team members already share an organisation, so this is usually expected — but do make sure people are comfortable being compared this way, especially anyone added from a result file. Nothing on this page is uploaded anywhere; result files are read only inside your own browser.",
     invalidFileNote: (fileName) => `Skipped "${fileName}" — it doesn't look like a Conversa result file.`,
     analysisHeading: "Team takeaways",
     analysisIntro:

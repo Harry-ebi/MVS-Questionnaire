@@ -1,11 +1,16 @@
 /**
  * team.js
  * -----------------------------------------------------------------------
- * Team overlay — entirely local, no server, no accounts. The facilitator
- * loads everyone's saved result-*.json files (from a shared folder, or
- * emailed to them) straight into the browser via a file picker or
- * drag-and-drop, and this page reads them with the File/FileReader APIs
- * and renders the existing overlay chart. Nothing is uploaded anywhere.
+ * Team insights — the team is your organisation. When an organisation
+ * administrator opens this page, everyone in their active organisation who
+ * has completed a communication profile is loaded automatically (straight
+ * from the account/organisation setup, via Row Level Security) and shown on
+ * the overlay. There is no "team code" to agree or type any more.
+ *
+ * A file-load fallback is kept for ad-hoc groups or people outside the
+ * organisation who don't have accounts: their saved result-*.json files are
+ * read locally in the browser and added to the overlay. Nothing loaded that
+ * way is uploaded anywhere.
  * -----------------------------------------------------------------------
  */
 
@@ -39,9 +44,9 @@
 
   /**
    * A participant's own saved `pattern` key is the richest data already
-   * sitting in their result file — fall back to re-deriving it from
-   * their percentages only if it's missing or invalid (e.g. a
-   * hand-edited or older file).
+   * sitting in their result — fall back to re-deriving it from their
+   * percentages only if it's missing or invalid (e.g. a hand-edited or
+   * older file).
    */
   function resolvePattern(participant) {
     const fromKey = patternFromKey(participant.pattern);
@@ -74,11 +79,7 @@
    * assembled entirely from data already on the page (each participant's
    * saved pattern and percentages) plus the existing per-dimension
    * reference text — nothing here is new copy invented about a specific
-   * team. This used to sit alongside a fixed 3x3 "how the styles
-   * communicate" matrix, which was removed as redundant: the guidance
-   * tool (guide.html) already covers pairwise dynamics in far more
-   * depth, so this section now goes deeper on the group itself instead
-   * of duplicating a lighter version of that other module.
+   * team.
    */
   function renderTeamAnalysisSection(participants) {
     if (participants.length < 2) {
@@ -128,11 +129,6 @@
     const focusedCount = participants.filter((p) => resolvePattern(p).type === PATTERN.FOCUSED).length;
     takeaways.push(c.analysisBlendSplit(focusedCount, total - focusedCount, total));
 
-    // Pattern breakdown: how many people fall into each distinct pattern
-    // key seen in this group (not just the 3 primary dimensions above) —
-    // richer than the primary-priority counts since it captures Dual-led
-    // and Balanced results as their own thing rather than collapsing
-    // them into whichever dimension scored highest.
     const patternCounts = {};
     participants.forEach((p) => {
       const key = resolvePattern(p).key;
@@ -217,76 +213,97 @@
   }
 
   // ------------------------------------------------------------------
-  // Team-code load (primary path) — fetches straight from the shared
-  // database via a Postgres function that only returns rows matching the
-  // exact code supplied (see README.md "Database setup"). No files to
-  // collect; this is what makes the tool "save automatically" end to end.
+  // Page state — the org's members (loaded automatically) plus any ad-hoc
+  // result files loaded through the fallback. The overlay renders the
+  // union of the two.
   // ------------------------------------------------------------------
+  const state = {
+    bannerTitle: "",
+    bannerBody: "",
+    bannerCta: null,
+    bannerHref: null,
+    orgParticipants: [],
+    orgPending: [],
+    fileParticipants: [],
+    skipped: [],
+  };
 
-  function renderCodeLoadSection() {
-    return `
-      <section class="mvs-section mvs-print-hide">
-        <h2 class="mvs-section-title">${escapeHtml(c.codeHeading)}</h2>
-        <form id="mvs-code-form" novalidate>
-          <label class="mvs-field-label" for="mvs-team-code-input">${escapeHtml(c.codeLabel)}</label>
-          <input type="text" id="mvs-team-code-input" class="mvs-text-input" placeholder="${escapeHtml(
-            c.codePlaceholder
-          )}" autocomplete="off" />
-          <p class="mvs-note" id="mvs-code-status" hidden></p>
-          <button type="submit" class="mvs-btn mvs-btn--primary">${escapeHtml(c.codeCta)}</button>
-        </form>
-      </section>
-    `;
+  function participants() {
+    return state.orgParticipants.concat(state.fileParticipants);
   }
 
-  function wireCodeForm() {
-    const form = document.getElementById("mvs-code-form");
-    if (!form) return;
-    form.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const input = document.getElementById("mvs-team-code-input");
-      const status = document.getElementById("mvs-code-status");
-      const code = input.value.trim();
-      if (!code) {
-        status.hidden = false;
-        status.textContent = c.codeEmptyError;
-        return;
-      }
-      status.hidden = false;
-      status.textContent = "…";
+  // ------------------------------------------------------------------
+  // Org team load — the members of the reader's active organisation and
+  // their latest everyday communication profile, read straight from the
+  // database (Row Level Security only returns rows the org admin may see).
+  // ------------------------------------------------------------------
+  async function loadOrgTeam(org, token) {
+    const memRes = await SupabaseClient.select(
+      "memberships",
+      `organisation_id=eq.${org.id}&order=created_at.asc`,
+      token
+    );
+    const members = memRes.ok ? memRes.data : [];
+    const ids = members.map((m) => m.user_id);
 
-      if (typeof SupabaseClient === "undefined") {
-        status.textContent = c.codeErrorNote;
-        return;
-      }
-      const result = await SupabaseClient.rpc("get_team_submissions", { code });
-      if (!result.ok) {
-        status.hidden = false;
-        status.textContent = c.codeErrorNote;
-        return;
-      }
-      if (!result.data.length) {
-        status.hidden = false;
-        status.textContent = c.codeNoResultsNote(code);
-        return;
-      }
-      const participants = result.data.map((row) => ({
-        name: row.name,
-        percentages: { drive: row.drive, connection: row.connection, clarity: row.clarity },
-        pattern: row.pattern,
-      }));
-      renderOverlay(participants, []);
+    let profilesById = {};
+    if (ids.length) {
+      const profRes = await SupabaseClient.select("profiles", `id=in.(${ids.join(",")})`, token);
+      if (profRes.ok) profRes.data.forEach((p) => (profilesById[p.id] = p));
+    }
+
+    const subRes = await SupabaseClient.select(
+      "submissions",
+      `organisation_id=eq.${org.id}&record_type=eq.everyday&order=created_at.desc`,
+      token
+    );
+    const subs = subRes.ok ? subRes.data : [];
+
+    // Latest everyday profile per member.
+    const latestByUser = {};
+    subs.forEach((s) => {
+      if (s.user_id && !latestByUser[s.user_id]) latestByUser[s.user_id] = s;
     });
+
+    const parts = [];
+    const pending = [];
+    members.forEach((m) => {
+      const prof = profilesById[m.user_id] || {};
+      const displayName = prof.display_name || prof.first_name || prof.email || "Team member";
+      const s = latestByUser[m.user_id];
+      if (
+        s &&
+        Number.isFinite(s.drive) &&
+        Number.isFinite(s.connection) &&
+        Number.isFinite(s.clarity)
+      ) {
+        parts.push({
+          name: s.name || displayName,
+          percentages: { drive: s.drive, connection: s.connection, clarity: s.clarity },
+          pattern: s.pattern,
+        });
+      } else {
+        pending.push(displayName);
+      }
+    });
+
+    state.orgParticipants = parts;
+    state.orgPending = pending;
+    state.bannerTitle = org.name;
+    state.bannerBody =
+      (parts.length ? c.orgLoadedNote(parts.length) : c.orgEmptyNote) +
+      (pending.length ? " " + c.orgPendingNote(pending.length) : "");
+    render();
   }
 
+  // ------------------------------------------------------------------
+  // File fallback — ad-hoc / outside-the-org people, read locally.
+  // ------------------------------------------------------------------
   async function handleFiles(fileList) {
     const files = Array.from(fileList || []);
     if (!files.length) return;
 
     const parsed = await Promise.all(files.map(readFileAsJson));
-    const valid = [];
-    const skipped = [];
-
     parsed.forEach(({ file, data }) => {
       const looksValid =
         data &&
@@ -297,18 +314,52 @@
         Number.isFinite(data.percentages.connection) &&
         Number.isFinite(data.percentages.clarity);
       if (looksValid) {
-        valid.push({ name: data.name, percentages: data.percentages, pattern: data.pattern });
+        state.fileParticipants.push({ name: data.name, percentages: data.percentages, pattern: data.pattern });
       } else {
-        skipped.push(file.name);
+        state.skipped.push(file.name);
       }
     });
 
-    renderOverlay(valid, skipped);
+    render();
   }
 
-  function renderOverlay(participants, skipped) {
-    const warningHtml = skipped.length
-      ? `<div class="mvs-callout mvs-print-hide"><p>${skipped
+  function bannerHtml() {
+    if (!state.bannerTitle && !state.bannerBody) return "";
+    const cta = state.bannerCta
+      ? `<a class="mvs-btn mvs-btn--primary" href="${state.bannerHref}">${escapeHtml(state.bannerCta)}</a>`
+      : "";
+    return `
+      <section class="mvs-section mvs-print-hide">
+        <div class="mvs-callout">
+          ${state.bannerTitle ? `<p><strong>${escapeHtml(state.bannerTitle)}</strong></p>` : ""}
+          ${state.bannerBody ? `<p>${escapeHtml(state.bannerBody)}</p>` : ""}
+          ${cta}
+        </div>
+      </section>
+    `;
+  }
+
+  function fileFallbackHtml() {
+    return `
+      <section class="mvs-section mvs-print-hide">
+        <h2 class="mvs-section-title">${escapeHtml(c.loadHeading)}</h2>
+        <p class="mvs-note">${escapeHtml(c.loadIntro)}</p>
+        <div class="mvs-dropzone" id="mvs-dropzone">
+          <input type="file" id="mvs-file-input" accept="application/json,.json" multiple style="display:none" />
+          <button type="button" class="mvs-btn mvs-btn--ghost" id="mvs-choose-files-btn">${escapeHtml(
+            c.loadButtonLabel
+          )}</button>
+          <p class="mvs-note">${escapeHtml(c.loadHint)}</p>
+          <p class="mvs-note">or drag files here</p>
+        </div>
+      </section>
+    `;
+  }
+
+  function render() {
+    const parts = participants();
+    const warningHtml = state.skipped.length
+      ? `<div class="mvs-callout mvs-print-hide"><p>${state.skipped
           .map((n) => escapeHtml(c.invalidFileNote(n)))
           .join("<br>")}</p></div>`
       : "";
@@ -319,42 +370,27 @@
         <h1>${escapeHtml(c.title)}</h1>
         <a href="index.html" class="mvs-meta-line mvs-print-hide">&larr; Back to home</a>
 
-        ${renderCodeLoadSection()}
-
-        <section class="mvs-section mvs-print-hide">
-          <h2 class="mvs-section-title">${escapeHtml(c.loadHeading)}</h2>
-          <p class="mvs-note">${escapeHtml(c.loadIntro)}</p>
-          <div class="mvs-dropzone" id="mvs-dropzone">
-            <input type="file" id="mvs-file-input" accept="application/json,.json" multiple style="display:none" />
-            <button type="button" class="mvs-btn mvs-btn--ghost" id="mvs-choose-files-btn">${escapeHtml(
-              c.loadButtonLabel
-            )}</button>
-            <p class="mvs-note">${escapeHtml(c.loadHint)}</p>
-            <p class="mvs-note">or drag files here</p>
-          </div>
-        </section>
-
-        ${warningHtml}
+        ${bannerHtml()}
 
         <section class="mvs-section">
           <h2 class="mvs-section-title">${escapeHtml(c.overlayHeading)}</h2>
           ${
-            participants.length
+            parts.length
               ? '<div id="mvs-overlay-chart"></div>'
               : `<p class="mvs-lead">${escapeHtml(c.overlayEmpty)}</p>`
           }
         </section>
 
         ${
-          participants.length
+          parts.length
             ? `<section class="mvs-section"><p class="mvs-note">${escapeHtml(c.privacyNote)}</p></section>`
             : ""
         }
 
-        ${renderTeamAnalysisSection(participants)}
+        ${renderTeamAnalysisSection(parts)}
 
         ${
-          participants.length
+          parts.length
             ? `
           <div class="mvs-btn-row mvs-print-hide">
             <button type="button" class="mvs-btn mvs-btn--primary" id="mvs-team-export-pdf">${escapeHtml(
@@ -365,16 +401,18 @@
         `
             : ""
         }
+
+        ${fileFallbackHtml()}
+        ${warningHtml}
       </div>
     `;
 
-    if (participants.length) {
-      renderOverlayChart(document.getElementById("mvs-overlay-chart"), participants, dimNames);
+    if (parts.length) {
+      renderOverlayChart(document.getElementById("mvs-overlay-chart"), parts, dimNames);
       const exportBtn = document.getElementById("mvs-team-export-pdf");
       if (exportBtn) exportBtn.addEventListener("click", () => window.print());
     }
 
-    wireCodeForm();
     wireFileInput();
   }
 
@@ -382,6 +420,7 @@
     const input = document.getElementById("mvs-file-input");
     const chooseBtn = document.getElementById("mvs-choose-files-btn");
     const dropzone = document.getElementById("mvs-dropzone");
+    if (!input || !chooseBtn || !dropzone) return;
 
     chooseBtn.addEventListener("click", () => input.click());
     input.addEventListener("change", () => handleFiles(input.files));
@@ -402,47 +441,65 @@
     });
   }
 
-  function renderIntro() {
+  // ------------------------------------------------------------------
+  // Boot — work out the reader's context and load their org team, or show
+  // the appropriate note (with the file fallback always available).
+  // ------------------------------------------------------------------
+  (async function boot() {
+    const signedIn = typeof Auth !== "undefined" && Auth.isSignedIn();
+
+    if (!signedIn) {
+      state.bannerTitle = c.orgSignedOutHeading;
+      state.bannerBody = c.orgSignedOutBody;
+      state.bannerCta = c.signInCta;
+      state.bannerHref = "login.html";
+      render();
+      return;
+    }
+
+    // Loading placeholder while we resolve the account context.
     root.innerHTML = `
       <div class="mvs-screen">
         <p class="mvs-eyebrow">${CONTENT.meta.shortName}</p>
         <h1>${escapeHtml(c.title)}</h1>
-        <p class="mvs-lead">${escapeHtml(c.intro)}</p>
-        <a href="index.html" class="mvs-meta-line">&larr; Back to home</a>
-
-        <section class="mvs-section">
-          <h2 class="mvs-section-title">${escapeHtml(c.howItWorksHeading)}</h2>
-          <ol class="mvs-list" style="padding-left:20px;">
-            ${c.howItWorksSteps.map((s) => `<li>${escapeHtml(s)}</li>`).join("")}
-          </ol>
-        </section>
-
-        ${renderCodeLoadSection()}
-
-        <section class="mvs-section">
-          <h2 class="mvs-section-title">${escapeHtml(c.loadHeading)}</h2>
-          <p class="mvs-note">${escapeHtml(c.loadIntro)}</p>
-          <div class="mvs-dropzone" id="mvs-dropzone">
-            <input type="file" id="mvs-file-input" accept="application/json,.json" multiple style="display:none" />
-            <button type="button" class="mvs-btn mvs-btn--ghost" id="mvs-choose-files-btn">${escapeHtml(
-              c.loadButtonLabel
-            )}</button>
-            <p class="mvs-note">${escapeHtml(c.loadHint)}</p>
-            <p class="mvs-note">or drag files here</p>
-          </div>
-        </section>
-
-        <section class="mvs-section">
-          <h2 class="mvs-section-title">${escapeHtml(c.overlayHeading)}</h2>
-          <p class="mvs-lead">${escapeHtml(c.overlayEmpty)}</p>
-        </section>
-
-        ${renderTeamAnalysisSection([])}
+        <p class="mvs-lead">${escapeHtml(c.orgLoading)}</p>
       </div>
     `;
-    wireCodeForm();
-    wireFileInput();
-  }
 
-  renderIntro();
+    let ctx = null;
+    try {
+      ctx = await Auth.loadContext(true);
+    } catch (e) {
+      ctx = null;
+    }
+    const org = ctx && ctx.activeOrg;
+
+    if (!ctx) {
+      state.bannerTitle = c.orgHeading;
+      state.bannerBody = c.orgErrorNote;
+      render();
+      return;
+    }
+    if (!org || org.is_personal) {
+      state.bannerTitle = c.orgHeading;
+      state.bannerBody = c.orgPersonalBody;
+      render();
+      return;
+    }
+    if (ctx.role !== "org_admin") {
+      state.bannerTitle = org.name;
+      state.bannerBody = c.orgNotAdminBody;
+      render();
+      return;
+    }
+
+    const token = await Auth.getAccessToken();
+    try {
+      await loadOrgTeam(org, token);
+    } catch (e) {
+      state.bannerTitle = org.name;
+      state.bannerBody = c.orgErrorNote;
+      render();
+    }
+  })();
 })();
