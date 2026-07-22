@@ -76,7 +76,7 @@
           <p>${escapeHtml(c.disclaimer)}</p>
         </div>
         <p class="mvs-meta-line">Takes about ${CONTENT.meta.estimatedMinutes}. No account needed.</p>
-        <p class="mvs-meta-line">Looking for the <a href="team.html">team overlay</a> or <a href="guess.html">blind-spot exercise</a> instead?</p>
+        <p class="mvs-meta-line">Looking for <a href="team.html">team insights</a> or a <a href="guess.html">perception check</a> instead?</p>
         <button type="button" class="mvs-btn mvs-btn--primary" id="mvs-start-btn">${escapeHtml(c.startCta)}</button>
       </div>
     `;

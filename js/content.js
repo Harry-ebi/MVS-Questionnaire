@@ -16,15 +16,15 @@
  * "pattern" (Focused / Dual-led / Balanced — see js/scoring.js) plus
  * whichever dimension(s) that pattern points to. See README.md for
  * full editing instructions, and for the notes on why this tool avoids
- * any resemblance to commercial motivation/personality assessments.
+ * any resemblance to commercial products in this space.
  * -----------------------------------------------------------------------
  */
 
 const CONTENT = {
 
   meta: {
-    toolName: "Ways of Working: a workplace priorities reflection tool",
-    shortName: "Ways of Working",
+    toolName: "Conversa — Better workplace communication",
+    shortName: "Conversa",
     estimatedMinutes: "5–8 minutes",
   },
 
@@ -35,58 +35,58 @@ const CONTENT = {
   dimensionOrder: ["drive", "connection", "clarity"],
 
   home: {
-    title: "Ways of Working",
+    title: "Conversa",
     intro:
-      "A short reflection tool on your priorities at work, and three ways to build on it with a team — no accounts, no installs, nothing to set up.",
+      "Better workplace communication. Conversa helps you and your team understand your communication preferences and work together more effectively — no accounts, no installs, nothing to set up.",
     whatHeading: "What this is",
     whatBody:
-      "Ways of Working is a short, original self-reflection tool. It looks at what drives your day-to-day priorities at work across three broad areas — Drive, Connection and Clarity — and gives you a plain-English write-up of your own pattern, plus a couple of ways to explore that alongside a team.",
+      "Conversa is a communication tool for individuals and teams. It starts by helping you understand how you naturally communicate across three broad areas — Drive, Connection and Clarity — then turns that into practical, plain-English guidance for better conversations, plus a couple of ways to explore how a team communicates together.",
     useHeading: "What it's for",
     useBody:
-      "Use it to understand your own working priorities, to see how a team's priorities sit alongside each other, or to run a light, low-pressure workshop exercise on perception versus reality. Every result is meant as a starting point for a better conversation, not a final verdict — most people show a mix of all three areas rather than sitting neatly in one box, and that mix can shift with role, team and circumstance.",
+      "Use it to understand your own communication style, to see how a team's communication preferences fit together, or to run a light, low-pressure workshop on how well colleagues read each other. Every result is a starting point for a better conversation, not a verdict — most people draw on all three areas rather than sitting neatly in one box, and the balance shifts with role, team and circumstance.",
     notHeading: "What it isn't",
     notBody:
-      "This is not a validated psychometric or clinical assessment, and it isn't affiliated with, endorsed by, or based on the proprietary content of any commercial personality or motivation assessment. It isn't designed or intended for hiring decisions, performance ratings, or any formal HR process — it's an educational reflection tool, and every screen in it says so.",
+      "Conversa is a practical communication tool, not a clinical or diagnostic one. It isn't affiliated with, endorsed by, or based on any commercial test, and it isn't designed or intended for hiring decisions, performance ratings, or any formal HR process — it's here to help people communicate more effectively, and every screen reflects that.",
     cardsHeading: "My apps",
-    // Order matters here: solo reflection is the primary/most-used tool
-    // (rendered as the larger, featured tile), then team overlay, then
-    // the blind-spot exercise. The communication guide isn't in this
+    // Order matters here: communication profile is the primary/most-used tool
+    // (rendered as the larger, featured tile), then team insights, then
+    // the perception check. The communication guide isn't in this
     // list at all — it's a different kind of thing (an anytime reference
     // guide, not a run-through-once workflow), so it gets its own
     // separately-styled banner via CONTENT.home.guideCard instead of
     // living in this tile grid alongside the other three.
     cards: [
       {
-        title: "Solo reflection",
-        body: "The core 5–8 minute questionnaire, just for you. Start here.",
+        title: "Communication profile",
+        body: "Discover how you naturally communicate — a quick 5–8 minute step, just for you. Start here.",
         href: "reflection.html",
-        cta: "Start solo reflection",
+        cta: "Discover your profile",
         accent: "reflection",
         icon: "reflection",
       },
       {
-        title: "Team overlay",
-        body: "See everyone's results plotted together on one triangle.",
+        title: "Team insights",
+        body: "See how your team's communication preferences fit together on a single view.",
         href: "team.html",
-        cta: "View a team overlay",
+        cta: "Open team insights",
         accent: "team",
         icon: "team",
       },
       {
-        title: "Blind-spot exercise",
-        body: "Guess where the team sits, then compare to reality.",
+        title: "Perception check",
+        body: "Guess how your teammates communicate, then compare with reality — a quick way to surface assumptions.",
         href: "guess.html",
-        cta: "Start a blind-spot exercise",
+        cta: "Start a perception check",
         accent: "blindspot",
         icon: "blindspot",
       },
     ],
     guideCard: {
       tag: "Reference guide — usable anytime",
-      title: "Working with different priorities",
-      body: "Not a one-off exercise like the tools above — a guide for working with someone whose priorities lean differently from your own, from any starting point (pick your pattern, place yourself on the chart, or load a saved file).",
+      title: "Communicating across different priorities",
+      body: "Not a one-off exercise like the tools above — a practical guide to communicating with someone whose priorities lean differently from your own, from any starting point (pick your style, place yourself on the chart, or load a saved file).",
       href: "guide.html",
-      cta: "Open the guidance tool",
+      cta: "Open the guide",
       icon: "guide",
     },
     adminLinkLabel: "Admin: view all submissions",
@@ -115,18 +115,18 @@ const CONTENT = {
       scopeAll: "across all team codes",
       scopeTeam: (code) => `for team code “${code}”`,
       empty: "No submissions yet — this fills in as people complete the tool.",
-      tileEveryday: "Everyday reflections",
+      tileEveryday: "Communication profiles",
       tilePressure: "Under-pressure add-ons",
       tilePeople: "People",
       tileTeams: "Teams",
       lastActivity: (when) => `Most recent activity: ${when}`,
       byDayHeading: "Completions by day",
       byDayNote: (n) => `Showing the last ${n} day${n === 1 ? "" : "s"} with activity.`,
-      priorityHeading: "Leading priority (everyday reflections)",
+      priorityHeading: "Leading priority (communication profiles)",
       priorityNote: "Which area each person's everyday result leans toward most.",
     },
     internalUseNotice:
-      "For internal use only. This tool is an educational self-reflection aid, not a validated assessment — please don't use anything in this table to make hiring, promotion, performance or disciplinary decisions, and don't forward it outside the people directly involved without their knowledge.",
+      "For internal use only. This tool is an educational communication aid, not a diagnostic tool — please don't use anything in this table to make hiring, promotion, performance or disciplinary decisions, and don't forward it outside the people directly involved without their knowledge.",
     loginHeading: "Admin sign-in",
     loginBody: "Sign in with the admin email and password set up for this tool.",
     emailLabel: "Email",
@@ -142,7 +142,7 @@ const CONTENT = {
       "Submissions saved before the database was set up won't be in the table above automatically — load their result-*.json files here to add them in.",
     loadButtonLabel: "Choose result files…",
     loadHint: "Select all the result-*.json files at once (hold Ctrl/Cmd to multi-select).",
-    invalidFileNote: (fileName) => `Skipped "${fileName}" — it doesn't look like a Ways of Working result file.`,
+    invalidFileNote: (fileName) => `Skipped "${fileName}" — it doesn't look like a Conversa result file.`,
     tableHeading: "Submissions",
     tableEmpty: "No submissions yet.",
     tableLoadError: "Couldn't reach the shared database just now — try refreshing the page in a moment.",
@@ -156,8 +156,8 @@ const CONTENT = {
     colSubmitted: "Submitted",
     colType: "Type",
     colShift: "Degree of change",
-    typeEveryday: "Everyday Priorities",
-    typePressure: "Priorities Under Pressure",
+    typeEveryday: "Everyday Communication",
+    typePressure: "Communication Under Pressure",
     shiftNone: "—",
     colDelete: "",
     exportCsvCta: "Download as CSV",
@@ -176,13 +176,13 @@ const CONTENT = {
   },
 
   team: {
-    title: "Team overlay",
+    title: "Team insights",
     intro:
-      "Each person completes the solo reflection on their own device and enters a shared team code when asked for their name. Come back here, type that same code, and everyone who used it appears on the overlay automatically — no files to collect.",
+      "Each person completes the communication profile on their own device and enters a shared team code when asked for their name. Come back here, type that same code, and everyone who used it appears on the overlay automatically — no files to collect.",
     howItWorksHeading: "How to run this with your team",
     howItWorksSteps: [
       "Agree a short team code with your group beforehand — anything memorable, e.g. ATLAS7.",
-      "Send everyone the solo reflection page (index.html) and ask them to complete it, entering that code when asked for their name.",
+      "Send everyone the communication profile page (index.html) and ask them to complete it, entering that code when asked for their name.",
       "Come back to this page, type the same code below, and click “Load team” — everyone who used it appears on the overlay automatically.",
       "Didn't use a team code, or prefer the old way? Everyone can still save and share a result file instead — see “Load from files” further down.",
     ],
@@ -200,11 +200,11 @@ const CONTENT = {
       "Prefer not to use a team code, or working with older result files? Load everyone's saved result-*.json files here the same way as before.",
     loadButtonLabel: "Choose result files…",
     loadHint: "Select all the result-*.json files at once (hold Ctrl/Cmd to multi-select).",
-    overlayHeading: "Team overlay",
+    overlayHeading: "Team insights",
     overlayEmpty: "No results loaded yet — enter a team code above, or load result files below, to see the overlay.",
     privacyNote:
       "Everyone whose file you load here can see everyone else's name and result in this overlay, once you show it to them. Make sure your team is comfortable with that before collecting these files — nothing is shared beyond your own browser unless someone chooses to save and hand over a result file. Nothing is uploaded anywhere by this page — the files are only read inside your own browser.",
-    invalidFileNote: (fileName) => `Skipped "${fileName}" — it doesn't look like a Ways of Working result file.`,
+    invalidFileNote: (fileName) => `Skipped "${fileName}" — it doesn't look like a Conversa result file.`,
     analysisHeading: "Team takeaways",
     analysisIntro:
       "A few observations based on the group you've loaded — useful as conversation starters, not conclusions. For a deeper look at how any two results tend to work together, use the guidance tool from the home page instead — this section stays focused on the group as a whole.",
@@ -238,19 +238,19 @@ const CONTENT = {
   },
 
   guessExercise: {
-    title: "Blind-spot exercise",
+    title: "Perception check",
     intro:
-      "Before anyone sees real results, each team member guesses where they think they and every teammate sit on the triangle. Enter the same team code your group used for the solo reflection to save and reveal guesses automatically — or share files by hand the old way if you'd rather.",
+      "Before anyone sees real results, each team member guesses where they think they and every teammate sit on the triangle. Enter the same team code your group used for the communication profile to save and reveal guesses automatically — or share files by hand the old way if you'd rather.",
     howItWorksHeading: "How to run this with your team",
     howItWorksGuessSteps: [
       "Open the “Enter your guesses” section below on your own device.",
-      "Enter the team code your group used for the solo reflection to load everyone's names automatically (or type them in yourself), then pick which one is you.",
-      "If your group is using a team code, enter the same one used on the solo reflection — this saves your guesses automatically, ready for the reveal step.",
+      "Enter the team code your group used for the communication profile to load everyone's names automatically (or type them in yourself), then pick which one is you.",
+      "If your group is using a team code, enter the same one used on the communication profile — this saves your guesses automatically, ready for the reveal step.",
       "Place a guess for yourself, then for every teammate, by tapping/dragging on the triangle.",
       "No team code? You can still save a guesses file at the end and add it to your shared folder, alongside everyone's real result files.",
     ],
     howItWorksRevealSteps: [
-      "Once everyone has entered their guesses (and completed the solo reflection) using the same team code, open the “Reveal” section below and type that code in.",
+      "Once everyone has entered their guesses (and completed the communication profile) using the same team code, open the “Reveal” section below and type that code in.",
       "No team code in use? Load everyone's saved guesses files and result files at once instead.",
       "This page matches everything up by name and shows, for each person, their actual result next to everyone's guesses about them.",
     ],
@@ -259,11 +259,11 @@ const CONTENT = {
     teamLookupLabel: "Team code",
     teamLookupPlaceholder: "e.g. ATLAS7",
     teamLookupCta: "Load names",
-    teamLookupEmptyError: "Type the team code your group used for the solo reflection.",
+    teamLookupEmptyError: "Type the team code your group used for the communication profile.",
     teamLookupErrorNote:
       "Couldn't reach the shared database just now — try again in a moment, or type the names in manually below.",
     teamLookupNoNamesNote: (code) =>
-      `No names found yet for team code "${code}" — check the code, or make sure teammates have completed the solo reflection with it. You can also type the names in manually below.`,
+      `No names found yet for team code "${code}" — check the code, or make sure teammates have completed the communication profile with it. You can also type the names in manually below.`,
     teamLookupLoadedNote: (count, code) =>
       `Loaded ${count} ${count === 1 ? "name" : "names"} from team code "${code}". Pick which one is you, then start guessing.`,
     manualRosterHeading: "Or type the names yourself",
@@ -278,7 +278,7 @@ const CONTENT = {
     saveGuessCta: "Save and continue",
     allDoneHeading: "All your guesses are in",
     allDoneBody:
-      "Save your guesses file below and add it to your team's shared folder, along with your real result file from the solo reflection.",
+      "Save your guesses file below and add it to your team's shared folder, along with your real result file from the communication profile.",
     cloudSaveOkNote: (teamCode) =>
       `Your guesses have also been saved automatically under team code "${teamCode}" — they'll show up on the reveal step once results are ready, no file needed.`,
     cloudSaveFailNote:
@@ -296,34 +296,32 @@ const CONTENT = {
       `Nothing found yet for team code "${code}" — check the code, or make sure your teammates entered it when saving their guesses and results.`,
     loadFilesHeading: "Or load from files instead",
     revealIntro:
-      "Prefer not to use a team code, or working with older files? Load everyone's saved guesses files and everyone's real result files (from the solo reflection) here to see how perception compared to reality. This only happens in your own browser — nothing is uploaded.",
+      "Prefer not to use a team code, or working with older files? Load everyone's saved guesses files and everyone's real result files (from the communication profile) here to see how perception compared to reality. This only happens in your own browser — nothing is uploaded.",
     loadGuessesLabel: "Choose guesses files…",
     loadResultsLabel: "Choose result files…",
     revealCta: "Reveal",
     revealedHeading: "Revealed: guesses vs. reality",
     revealedIntro:
-      "For each person: their actual result (the solid marker, from their real reflection) plus every guess made about them, including their own self-guess.",
+      "For each person: their actual result (the solid marker, from their real communication profile) plus every guess made about them, including their own self-guess.",
     missingActualNote:
-      "(No real result file loaded for this person yet — ask them to complete the solo reflection and save their result file.)",
+      "(No real result file loaded for this person yet — ask them to complete the communication profile and save their result file.)",
     revealExportCta: "Download as PDF",
     revealExportNote: "This opens your browser's print dialog — choose “Save as PDF” as the destination.",
   },
 
   landing: {
-    title: "What drives your priorities at work?",
+    title: "How do you naturally communicate at work?",
     intro:
-      "This short reflection tool is designed to help you think about what " +
-      "shapes your priorities at work, across three broad areas: Drive, " +
-      "Connection and Clarity. It takes about 5–8 minutes.",
+      "Conversa helps you understand how you naturally communicate at work, " +
+      "across three broad areas: Drive, Connection and Clarity. It takes " +
+      "about 5–8 minutes.",
     disclaimer:
-      "This is an educational self-reflection tool, not a validated " +
-      "psychometric assessment or clinical diagnosis. It is not affiliated " +
-      "with, endorsed by, or based on the proprietary content of any " +
-      "commercial personality or motivation assessment. Your results are a " +
-      "starting point for reflection and conversation, not a fixed label, " +
-      "and shouldn't be used for hiring, performance or other formal " +
-      "decisions about you or anyone else.",
-    startCta: "Start reflection",
+      "This is an educational communication tool, not a clinical or " +
+      "diagnostic one. It isn't affiliated with, endorsed by, or based on " +
+      "any commercial test. Your results are a starting point for better " +
+      "conversations, not a fixed label, and shouldn't be used for hiring, " +
+      "performance or other formal decisions about you or anyone else.",
+    startCta: "Start",
   },
 
   privacy: {
@@ -334,12 +332,12 @@ const CONTENT = {
       "Your answers are used only to calculate your own result, shown to you at the end.",
       "You'll be asked for your name next, so your own result is clearly yours — no email address is ever asked for.",
       "When you reach your results, a small file with your name and result downloads to your device automatically, and your name and result are also saved to this tool's shared database at the same time — visible to whoever administers this tool for your organisation.",
-      "If you enter a team code (optional, only relevant for a team exercise), your name and result also become visible — alongside your teammates' — to anyone who loads that same code on the team overlay or blind-spot exercise. Leave it blank if you're only doing this for yourself.",
+      "If you enter a team code (optional, only relevant for a team exercise), your name and result also become visible — alongside your teammates' — to anyone who loads that same code on the team insights or perception check. Leave it blank if you're only doing this for yourself.",
       "We may also store an anonymised, aggregated version of results (percentage splits only, with no name or other identifying detail) separately, to help us understand overall patterns and improve this tool. Anonymised data cannot be traced back to you.",
       "You can stop at any point before submitting your answers without anything being saved.",
     ],
     consentLabel:
-      "I understand this is a self-reflection tool, not a clinical or psychometric diagnosis, and I'm happy to continue on the basis above.",
+      "I understand this is a communication tool, not a clinical or diagnostic one, and I'm happy to continue on the basis above.",
     continueCta: "I understand, continue",
   },
 
@@ -352,7 +350,7 @@ const CONTENT = {
     errorNote: "Please type your name to continue.",
     teamCodeLabel: "Team code (optional)",
     teamCodeBody:
-      "Only fill this in if a facilitator gave you one for a team exercise — it lets your result join that team's shared overlay automatically. Leave it blank for a purely personal reflection.",
+      "Only fill this in if a facilitator gave you one for a team exercise — it lets your result join that team's shared overlay automatically. Leave it blank for purely personal use.",
     teamCodePlaceholder: "e.g. ATLAS7 — leave blank if you don't have one",
     continueCta: "Continue",
   },
@@ -362,11 +360,11 @@ const CONTENT = {
   },
 
   results: {
-    headerEyebrow: (name) => (name ? `${name}'s reflection result` : "Your reflection result"),
+    headerEyebrow: (name) => (name ? `${name}'s communication profile` : "Your communication profile"),
     primaryLabel: "Primary priority",
     secondaryLabel: "Secondary priority",
-    patternLabel: "Your pattern",
-    chartTitle: "Your relative priorities",
+    patternLabel: "Your communication style",
+    chartTitle: "Your communication priorities",
     dimensionNames: {
       drive: "Drive",
       connection: "Connection",
@@ -390,28 +388,28 @@ const CONTENT = {
     // dimensionNames above by the caller before interpolating here, so
     // this only deals with sentence shape, not vocabulary.
     patternHeadline: {
-      focused: (primaryLabel) => `Your priorities are clearly ${primaryLabel}-led.`,
+      focused: (primaryLabel) => `Your communication is clearly ${primaryLabel}-led.`,
       dual: (primaryLabel, secondaryLabel) =>
-        `Your priorities are led by a combination of ${primaryLabel} and ${secondaryLabel}.`,
-      balanced: () => "Your priorities are fairly evenly spread across all three areas.",
+        `Your communication is led by a combination of ${primaryLabel} and ${secondaryLabel}.`,
+      balanced: () => "Your communication draws fairly evenly on all three areas.",
     },
     restartCta: "Start again",
     exportCta: "Download as PDF",
     exportNote: "This opens your browser's print dialog — choose “Save as PDF” as the destination.",
-    strengthsHeading: "Potential strengths",
-    overuseHeading: "When your approach goes too far",
-    communicationTipsHeading: "Worth trying yourself",
-    howOthersCanWorkHeading: "How others can work with you",
-    workingGuideHeading: "A quick guide to working with different priorities",
+    strengthsHeading: "Communication strengths",
+    overuseHeading: "Communication watch-outs",
+    communicationTipsHeading: "Ways to communicate more effectively",
+    howOthersCanWorkHeading: "How others can communicate with you",
+    workingGuideHeading: "A quick guide to communicating across different priorities",
     workingGuideIntro: (ownLabel) =>
-      `Your own pattern is ${ownLabel}. Here's a short, practical guide to working with colleagues whose priorities lean differently — useful in meetings, feedback conversations and delegation.`,
-    saveFileHeading: "Contributing to a team overlay or blind-spot exercise?",
+      `Your own communication style is ${ownLabel}. Here's a short, practical guide to communicating with colleagues whose priorities lean differently — useful in meetings, feedback conversations and delegation.`,
+    saveFileHeading: "Contributing to team insights or a perception check?",
     cloudSaveOkNote: (teamCode) =>
       teamCode
-        ? `Your result has also been saved automatically under team code "${teamCode}" — anyone who loads that code on the team overlay or blind-spot exercise will see it. No file needs to be collected or shared for that to work.`
+        ? `Your result has also been saved automatically under team code "${teamCode}" — anyone who loads that code on the team insights or perception check will see it. No file needs to be collected or shared for that to work.`
         : "You didn't enter a team code, so this result hasn't joined any team's shared overlay — it only exists in the file below, on your own device.",
     cloudSaveFailNote:
-      "Couldn't reach the shared database just now, so this result hasn't joined a team overlay automatically. The file below still has everything it needs — hand it over the old way (email, a shared folder) if this keeps happening.",
+      "Couldn't reach the shared database just now, so this result hasn't joined team insights automatically. The file below still has everything it needs — hand it over the old way (email, a shared folder) if this keeps happening.",
     saveFileAutoNote: (filename) =>
       `A result file (${filename}) has also started downloading to your device automatically — you don't need to click anything for that part. This only ever goes to your own downloads; nothing is sent anywhere by this tool.`,
     saveFileNote:
@@ -722,12 +720,12 @@ const CONTENT = {
    * approach.
    *
    * This is original content, written for this product. It is not a
-   * reproduction of any commercial assessment's questions, scoring or
+   * reproduction of any commercial product's questions, scoring or
    * report text — see README.md for the intellectual-property notes
    * this feature was built against.
    *
-   * Terminology used throughout: "Everyday Priorities" (the existing
-   * 30-question result) vs. "Priorities Under Pressure" (this new
+   * Terminology used throughout: "Everyday Communication" (the existing
+   * 30-question result) vs. "Communication Under Pressure" (this new
    * result) vs. "Degree of Change" (the size of the difference between
    * the two) vs. "Priority Shift" (the visual comparing them).
    * Deliberately avoided: "explosiveness", "conflict style"/"conflict
@@ -735,16 +733,16 @@ const CONTENT = {
    * ------------------------------------------------------------------
    */
 
-  // Banner shown on the Everyday Priorities results screen, offering the
+  // Banner shown on the Everyday Communication results screen, offering the
   // continuation. Entirely optional — declining it changes nothing
   // about the Everyday result already shown.
   pressureOffer: {
-    eyebrow: "Part 2 of your reflection",
+    eyebrow: "Part 2 of your profile",
     heading: "Now see how this shifts under pressure",
     body:
       "The result above is your everyday working priorities. Part 2 takes that further: 18 more questions on how your priorities change when disagreement or frustration continues, plotted alongside the result above so you can see the shift. Most people find this the more revealing half — it takes about 5–7 minutes.",
     cta: "Continue to Part 2",
-    skipNote: "Optional — your Everyday Priorities result above is already complete and saved either way, so there's no pressure to continue right now.",
+    skipNote: "Optional — your Everyday Communication result above is already complete and saved either way, so there's no pressure to continue right now.",
   },
 
   // Transition screen shown before the pressure questions start,
@@ -753,7 +751,7 @@ const CONTENT = {
     heading: "Now consider how you respond when difficulties continue",
     paragraphs: [
       "The next questions concern situations where disagreement, frustration or opposition remains unresolved — where your usual approach hasn't settled things.",
-      "Your priorities in these circumstances may be different from your everyday priorities. That's normal. Answer according to what you genuinely tend to do, not what you think the ideal response would be.",
+      "Your priorities in these circumstances may be different from your everyday communication. That's normal. Answer according to what you genuinely tend to do, not what you think the ideal response would be.",
       "There's no good or bad result here. The purpose is to understand which priorities become most important to you when working relationships are under strain.",
     ],
     instructionsHeading: "How to answer",
@@ -767,12 +765,12 @@ const CONTENT = {
       next: "Next most like me",
       least: "Least like me",
     },
-    startCta: "Begin Priorities Under Pressure",
-    backToResultsLink: "← Back to your Everyday Priorities result",
+    startCta: "Begin Communication Under Pressure",
+    backToResultsLink: "← Back to your Everyday Communication result",
   },
 
   pressureProgress: {
-    partLabel: "Part 2 of 2: Priorities under pressure",
+    partLabel: "Part 2 of 2: Communication under pressure",
     questionLabel: (current, total) => `Question ${current} of ${total}`,
     rankPrompt: "Rank these three responses from most like you to least like you.",
     tapToRankHint: "Tap in order: most like you first, least like you last.",
@@ -961,7 +959,7 @@ const CONTENT = {
    * ------------------------------------------------------------------
    * PRIORITIES UNDER PRESSURE — REPORT COPY
    * ------------------------------------------------------------------
-   * Copy used to assemble the "Priorities Under Pressure" report.
+   * Copy used to assemble the "Communication Under Pressure" report.
    * Rather than one static write-up per dimension, the report is built
    * from whichever dimension increases most and whichever decreases
    * most (see js/pressure.js), so the narrative actually reflects the
@@ -971,15 +969,15 @@ const CONTENT = {
    * ------------------------------------------------------------------
    */
   pressureResults: {
-    headerEyebrow: (name) => (name ? `${name}'s result: Priorities Under Pressure` : "Your result: Priorities Under Pressure"),
-    title: "Priorities Under Pressure",
+    headerEyebrow: (name) => (name ? `${name}'s result: Communication Under Pressure` : "Your result: Communication Under Pressure"),
+    title: "Communication Under Pressure",
     subtitle: "How your priorities may change when disagreement or frustration continues.",
-    everydayLabel: "Everyday Priorities",
-    pressureLabel: "Priorities Under Pressure",
+    everydayLabel: "Everyday Communication",
+    pressureLabel: "Communication Under Pressure",
     changeLabel: "Degree of Change",
     chartTitle: "Priority Shift",
-    chartLegendEveryday: "Everyday Priorities",
-    chartLegendPressure: "Priorities Under Pressure",
+    chartLegendEveryday: "Everyday Communication",
+    chartLegendPressure: "Communication Under Pressure",
     scoreTableHeading: "Your scores",
     colPriority: "Priority",
     colEveryday: "Everyday",
@@ -996,7 +994,7 @@ const CONTENT = {
       limited: "Your priorities remain relatively consistent, whether things are going smoothly or not.",
       noticeable: "There's some noticeable adaptation in what you focus on when disagreement continues.",
       significant: "Colleagues are likely to notice a material change in how you come across.",
-      marked: "Your pressure response may feel substantially different from your everyday priorities.",
+      marked: "Your pressure response may feel substantially different from your everyday communication.",
     },
     changeIntensityWord: {
       limited: "a little",
@@ -1050,16 +1048,16 @@ const CONTENT = {
       "What does your communication become more like?",
       "What might colleagues misinterpret?",
       "What value does your pressure response bring?",
-      "What part of your everyday priorities should you deliberately retain?",
+      "What part of your everyday communication should you deliberately retain?",
       "What helps you return to a constructive working relationship?",
     ],
     // Original wording — not a reproduction of any commercial
     // assessment's disclaimer text. If your organisation requires a
     // specific mandated form of words here, replace this string.
     disclaimer:
-      "This result is intended to support reflection and workplace conversations, not to diagnose or label anyone. It does not measure mental health, emotional stability, or a person's ability to manage disagreement, and it is not a validated psychometric or clinical assessment. It should not be used for hiring, performance, disciplinary or any other formal decision.",
+      "This result is intended to support better workplace conversations, not to diagnose or label anyone. It does not measure mental health, emotional stability, or a person's ability to manage disagreement, and it is not a clinical or diagnostic tool. It should not be used for hiring, performance, disciplinary or any other formal decision.",
     restartCta: "Start again",
-    backToEverydayCta: "← Back to your Everyday Priorities result",
+    backToEverydayCta: "← Back to your Everyday Communication result",
     exportCta: "Download as PDF",
     exportNote: "This opens your browser's print dialog — choose “Save as PDF” as the destination.",
     cloudSaveOkNote: (teamCode) =>
@@ -1067,7 +1065,7 @@ const CONTENT = {
         ? `This result has also been saved automatically under team code "${teamCode}".`
         : "This result has been saved to this tool's shared database.",
     cloudSaveFailNote:
-      "Couldn't reach the shared database just now, so this result hasn't saved automatically. Your Everyday Priorities result from earlier is unaffected.",
+      "Couldn't reach the shared database just now, so this result hasn't saved automatically. Your Everyday Communication result from earlier is unaffected.",
   },
 
   /**
@@ -1175,7 +1173,7 @@ const CONTENT = {
    * ------------------------------------------------------------------
    * RESULT WRITE-UPS
    * ------------------------------------------------------------------
-   * Rather than a fixed set of 7 named personality categories, results
+   * Rather than a fixed set of named categories, results
    * are assembled dynamically from a continuous score and a pattern
    * description (see js/scoring.js's derivePattern): a "Focused" result
    * (one dimension clearly leads) uses `dimensionContent[primary]`
@@ -1487,9 +1485,9 @@ const CONTENT = {
     methodTriangleReadoutPrefix: "Currently reads as:",
     methodTriangleCta: "Show my guide",
     methodUploadTitle: "Upload a saved result file",
-    methodUploadBody: "Used the solo reflection already and saved a result-*.json file? Load it here.",
+    methodUploadBody: "Used the communication profile already and saved a result-*.json file? Load it here.",
     methodUploadButtonLabel: "Choose result file…",
-    methodUploadInvalid: "That doesn't look like a Ways of Working result file — try another, or use one of the other two options above.",
+    methodUploadInvalid: "That doesn't look like a Conversa result file — try another, or use one of the other two options above.",
     resultHeading: (label) => `Working from a ${label} starting point`,
     sourcePick: "You told us your result directly.",
     sourceTriangle: (drive, connection, clarity) =>
@@ -1498,7 +1496,7 @@ const CONTENT = {
     changeStartCta: "Choose a different starting point",
     // Overview section — a short "what your result means" recap shown
     // before the generated guidance below. Reachable directly from the
-    // home page without doing the full solo reflection first, so a
+    // home page without doing the full communication profile first, so a
     // reader might be seeing this write-up for the first time here.
     overviewHeading: "Your result, in a nutshell",
     overviewStrengthsHeading: "Strengths you bring",

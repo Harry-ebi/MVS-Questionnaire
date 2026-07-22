@@ -1,4 +1,4 @@
-# Ways of Working — a workplace priorities reflection tool
+# Conversa — a workplace priorities reflection tool
 
 A small, standalone web app: a ~30-question forced-choice reflection tool that
 gives people a sense of whether their working priorities lean toward
