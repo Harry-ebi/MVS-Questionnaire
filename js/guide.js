@@ -289,15 +289,7 @@
           <div class="mvs-wwd-card mvs-commguide-card">
             <div class="mvs-wwd-swatch mvs-wwd-swatch--${swatchClass(card.dims)}"></div>
             <h3>${escapeHtml(card.heading)}</h3>
-            <p class="mvs-commguide-field-label">${escapeHtml(c.approachLabel)}</p>
-            <ul class="mvs-list">
-              ${card.approach.map((a) => `<li>${escapeHtml(a)}</li>`).join("")}
-            </ul>
-            <p class="mvs-commguide-field-label">${escapeHtml(c.strengthLabel)}</p>
-            <p class="mvs-commguide-text">${escapeHtml(card.strength)}</p>
-            <p class="mvs-commguide-field-label">${escapeHtml(c.watchForLabel)}</p>
-            <p class="mvs-commguide-text">${escapeHtml(card.watchFor)}</p>
-            <p class="mvs-commguide-reminder">${escapeHtml(c.reminderLabel)}: “${escapeHtml(card.reminder)}”</p>
+            ${card.note.map((p) => `<p class="mvs-commguide-text">${escapeHtml(p)}</p>`).join("")}
           </div>
         `
       )
