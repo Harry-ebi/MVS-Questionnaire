@@ -1212,9 +1212,47 @@ const CONTENT = {
       movement: (fromLabel, toLabel) => `You move from ${fromLabel} towards ${toLabel} under pressure.`,
       sameFocusIntensifies: (label) =>
         `You remain primarily ${label}-led, but become more strongly ${label}-focused under pressure.`,
+      // The "edge" case: your leading priority holds, but a different one
+      // rises enough to become a real second gear under pressure.
+      edge: (baseLabel, edgeLabel) =>
+        `Your ${baseLabel} focus holds, but a ${edgeLabel} edge comes through under pressure.`,
       balanced: (label) => `Your priorities remain broadly balanced, with a modest increase in ${label} focus.`,
       towardsCombination: (fromLabel, aLabel, bLabel) =>
         `You move away from ${fromLabel} towards a combination of ${aLabel} and ${bLabel}.`,
+    },
+    // The opening summary paragraph, written to match the *kind* of shift
+    // (see pressure.js classifyShift) rather than always saying "your
+    // priorities shift towards X" — which read as nonsense when the top
+    // priority never actually changed.
+    summaryFor: (story, x) => {
+      const band = x.bandLabel.toLowerCase();
+      const lead = `In everyday working relationships, your priorities are led by ${x.everydayLed}.`;
+      if (story === "steady") {
+        return (
+          `${lead} When disagreement continues, that stays broadly the same — your communication holds ` +
+          `steady, and colleagues are unlikely to see a marked change in how you come across.`
+        );
+      }
+      if (story === "edge") {
+        return (
+          `${lead} When disagreement continues, that ${x.baseLabel} focus stays your anchor, but a ` +
+          `${x.leadLabel} edge comes through: ${x.pressureFocus}. This is a ${band}, meaning colleagues may ` +
+          `experience you as ${x.intensityWord} more ${x.adjectives} than usual — layered on top of your ` +
+          `familiar ${x.baseLabel.toLowerCase()} style, not in place of it.`
+        );
+      }
+      if (story === "intensify") {
+        return (
+          `${lead} When disagreement continues, that same focus sharpens rather than shifting elsewhere. ` +
+          `This is a ${band}, meaning colleagues may experience you as ${x.intensityWord} more ${x.adjectives} ` +
+          `than they normally expect.`
+        );
+      }
+      // "flip" — the leading priority itself changes.
+      return (
+        `${lead} When disagreement continues, your lead shifts towards ${x.pressureFocus}. This is a ${band}, ` +
+        `meaning colleagues may experience you as ${x.intensityWord} more ${x.adjectives} than they normally expect.`
+      );
     },
     // Opening/closing clauses for the summary paragraph, keyed by
     // dimension — describes what someone prioritises day to day

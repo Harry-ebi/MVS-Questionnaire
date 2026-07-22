@@ -334,18 +334,73 @@ const PressureFlow = (function () {
     return CONTENT.balancedContent;
   }
 
-  function buildHeadline(rc, dimNames, change) {
+  // A rise has to clear this (in points) to count as a genuine *emerging
+  // edge* rather than noise. Kept in step with scoring.js's
+  // CHANGE_UNCHANGED_THRESHOLD (5): a move of 5 or less is "unchanged", so
+  // an edge needs to be strictly larger.
+  const EDGE_RISE_MIN = 5;
+
+  /**
+   * Work out the *story* the shift tells, and — crucially — which
+   * dimension the write-up should lead on. This replaces the old
+   * "always lead on whichever priority still dominates" rule, which
+   * mislabelled results where the top priority never changed but the real
+   * movement was a rise in a *different* dimension (e.g. someone heavily
+   * Clarity-led who leans towards Drive under pressure — still Clarity on
+   * top, but the story is the emerging Drive edge, not more Clarity).
+   *
+   *   steady    — nothing moves much; priorities hold.
+   *   flip      — the leading priority itself changes.
+   *   edge      — the leader holds, but another dimension rises enough to
+   *               become a real second gear. Lead on that rising edge,
+   *               with the unchanged leader named as the anchor (baseDim).
+   *   intensify — the same leading priority sharpens (it's the top riser,
+   *               or others simply recede around it).
+   *
+   * Returns { story, leadDim, baseDim, riseDim, decreaseDim }. `leadDim`
+   * is always the dimension whose coaching content should lead the report.
+   */
+  function classifyShift(change) {
+    const riseDim = change.largestIncreaseDim;
+    const riseAmt = change.deltas[riseDim];
+    const primary = change.everydayPrimary;
+    const decreaseDim = change.largestDecreaseDim;
+
     if (change.isBalancedMovement) {
-      return rc.headline.balanced(dimNames[change.largestIncreaseDim] || dimNames[change.everydayPrimary]);
+      return { story: "steady", leadDim: primary, baseDim: null, riseDim, decreaseDim };
     }
-    if (!change.primaryChanged) {
-      return rc.headline.sameFocusIntensifies(dimNames[change.everydayPrimary]);
+    if (change.primaryChanged) {
+      return { story: "flip", leadDim: change.pressurePrimary, baseDim: null, riseDim, decreaseDim };
     }
-    if (change.tiedIncreaseDims.length > 1) {
+    if (riseDim !== primary && riseAmt > EDGE_RISE_MIN) {
+      return { story: "edge", leadDim: riseDim, baseDim: primary, riseDim, decreaseDim };
+    }
+    if (riseDim === primary) {
+      // The leader is itself the biggest riser — it genuinely sharpens.
+      return { story: "intensify", leadDim: primary, baseDim: null, riseDim, decreaseDim };
+    }
+    // Leader held, nothing else rose enough to be a real edge: broadly steady
+    // (any notable *drop* is still surfaced via the "what recedes" line).
+    return { story: "steady", leadDim: primary, baseDim: null, riseDim, decreaseDim };
+  }
+
+  function buildHeadline(rc, dimNames, change, cls) {
+    // A genuine near-tie between two risers (and a story with real
+    // movement) reads best as "towards a combination of A and B".
+    if (cls.story !== "steady" && change.tiedIncreaseDims.length > 1) {
       const [a, b] = change.tiedIncreaseDims;
       return rc.headline.towardsCombination(dimNames[change.largestDecreaseDim], dimNames[a], dimNames[b]);
     }
-    return rc.headline.movement(dimNames[change.everydayPrimary], dimNames[change.pressurePrimary]);
+    if (cls.story === "steady") {
+      return rc.headline.balanced(dimNames[cls.riseDim] || dimNames[change.everydayPrimary]);
+    }
+    if (cls.story === "flip") {
+      return rc.headline.movement(dimNames[change.everydayPrimary], dimNames[change.pressurePrimary]);
+    }
+    if (cls.story === "edge") {
+      return rc.headline.edge(dimNames[cls.baseDim], dimNames[cls.leadDim]);
+    }
+    return rc.headline.sameFocusIntensifies(dimNames[cls.leadDim]);
   }
 
   function changeCell(rc, delta) {
@@ -378,17 +433,16 @@ const PressureFlow = (function () {
     const bandDesc = rc.changeBandDescriptions[bandKey];
     const intensityWord = rc.changeIntensityWord[bandKey];
 
-    // Body write-up selection — see PROJECT-NOTES "Priorities Under
-    // Pressure body-content mismatch" (Option 3: dominance-led, tie-
-    // blended). The *lead* voice of the report is the dimension that
-    // actually dominates the under-pressure result (end-state dominance,
-    // change.pressurePrimary) rather than whichever rose most by raw
-    // delta (change.largestIncreaseDim) — the two can disagree when a
-    // dimension rises sharply from a low base without overtaking the
-    // leader. When the biggest rise is a genuine near-tie between two
-    // dimensions, the tied one that isn't leading is still woven in as a
-    // secondary thread (a bullet or two per section) rather than dropped.
-    const leadDim = change.pressurePrimary;
+    // Body write-up selection — shift-aware (see classifyShift). The lead
+    // voice is the dimension whose *movement* is the actual story: the new
+    // leader if it flipped, the emerging edge if the leader held but
+    // another dimension rose, or the leader itself when it genuinely
+    // sharpens. This fixes results that re-described an unchanged dominant
+    // priority while ignoring the real shift (e.g. Clarity-led, leaning
+    // Drive under pressure — the story is Drive, not "more Clarity").
+    const cls = classifyShift(change);
+    const leadDim = cls.leadDim;
+    const baseDim = cls.baseDim; // the unchanged anchor in the "edge" story, else null
     const decreaseDim = change.largestDecreaseDim;
 
     // Secondary thread: the biggest near-tied riser that isn't the lead
@@ -404,20 +458,33 @@ const PressureFlow = (function () {
     const secondaryMovement = tiedSecondaryDim ? CONTENT.pressureMovement[tiedSecondaryDim] : null;
     const decreaseMovement = CONTENT.pressureMovement[decreaseDim];
 
-    const headline = buildHeadline(rc, dimNames, change);
+    const headline = buildHeadline(rc, dimNames, change, cls);
     const adjectives = rc.increaseAdjectives[leadDim].join(", ");
-    const summary =
-      `In everyday working relationships, your priorities are led by ${rc.everydayFocusPhrase[change.everydayPrimary]}. ` +
-      `When disagreement continues, your priorities shift towards ${rc.pressureFocusPhrase[leadDim]}. ` +
-      `This is a ${bandLabel.toLowerCase()}, meaning colleagues may experience you as ${intensityWord} more ${adjectives} than they normally expect.`;
+    const led = rc.everydayFocusPhrase[change.everydayPrimary];
+    const summary = rc.summaryFor(cls.story, {
+      everydayLed: led,
+      leadDim: leadDim,
+      baseDim: baseDim,
+      leadLabel: dimNames[leadDim],
+      baseLabel: baseDim ? dimNames[baseDim] : "",
+      pressureFocus: rc.pressureFocusPhrase[leadDim],
+      bandLabel: bandLabel,
+      intensityWord: intensityWord,
+      adjectives: adjectives,
+    });
 
     // Each section leads with the dominant dimension's content, then folds
     // in one supporting bullet from the tied secondary dimension (if any),
     // keeping the lead voice clearly dominant.
+    // The "what recedes" line is only honest when the receding dimension
+    // is neither the lead nor the still-dominant anchor — otherwise we'd
+    // tell someone their Clarity is fading in the same breath as calling
+    // it their anchor.
+    const showDecrease = decreaseDim !== leadDim && decreaseDim !== baseDim;
     const noticeBullets = leadMovement.increaseNotice
       .slice(0, secondaryMovement ? 2 : 3)
       .concat(secondaryMovement ? secondaryMovement.increaseNotice.slice(0, 1) : [])
-      .concat(decreaseDim !== leadDim ? [decreaseMovement.decreaseNotice] : []);
+      .concat(showDecrease ? [decreaseMovement.decreaseNotice] : []);
     const valueBullets = leadMovement.increaseValue.concat(
       secondaryMovement ? secondaryMovement.increaseValue.slice(0, 1) : []
     );
