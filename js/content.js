@@ -1734,7 +1734,7 @@ const CONTENT = {
       drive: {
         opensWith: "the decision or outcome they need, before any background",
         respondsTo: "a clear ask and visible momentum",
-        pushBack: "directly, and expects the same in return",
+        pushBack: "directly, and expect the same in return",
         underGap: "when their Drive score sits well above someone else's, slow the opening slightly and name the next concrete step explicitly",
       },
       connection: {
