@@ -90,7 +90,9 @@ const Nav = (function () {
     const signedIn = typeof Auth !== "undefined" && Auth.isSignedIn();
 
     const links = primaryLinks().map((l) => linkHtml(l, active)).join("");
-    const accountLabel = signedIn ? c.account || "Account" : c.accountMenu || "Account";
+    // Signed in, the button reads "Profile" and drops down Account / Admin /
+    // Sign out; signed out it reads "Account" (Sign in / Create account).
+    const accountLabel = signedIn ? c.profile || "Profile" : c.account || "Account";
 
     const personIcon = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>`;
     const caret = `<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>`;
@@ -200,7 +202,9 @@ const Nav = (function () {
             a.className = "mvs-account-item" + (active === "admin" ? " is-active" : "");
             a.href = "admin.html";
             a.textContent = c.admin || "Admin";
-            accountMenu.insertBefore(a, accountMenu.firstChild);
+            // Order: Account, Admin, Sign out — so insert before Sign out.
+            const signoutBtn = document.getElementById("mvs-nav-signout");
+            accountMenu.insertBefore(a, signoutBtn || null);
           }
         })
         .catch(() => {});

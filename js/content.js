@@ -42,6 +42,7 @@ const CONTENT = {
     team: "Team Insights",
     guide: "Guide",
     organisation: "Organisation",
+    profile: "Profile",
     account: "Account",
     admin: "Admin",
     menu: "Menu",

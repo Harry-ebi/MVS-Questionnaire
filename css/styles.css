@@ -2254,3 +2254,17 @@ h2 {
 /* Admin platform overview: two-column lists where there's room */
 .mvs-admin-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 0 20px; }
 @media (max-width: 560px) { .mvs-admin-cols { grid-template-columns: 1fr; } }
+
+/* Fix: the account dropdown must honour its hidden attribute despite the
+   .mvs-account-menu display rule (equal specificity, author CSS was winning). */
+.mvs-account-menu[hidden] { display: none; }
+
+/* Homepage: use the width on larger screens instead of a narrow column. */
+@media (min-width: 800px) {
+  #home-app { max-width: 980px; }
+  /* The three "about" panels sit side by side rather than stacked. */
+  .mvs-about-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+  .mvs-about-row .mvs-about-block { margin: 0; }
+}
+.mvs-tool-grid { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.mvs-about-row .mvs-section { border-top: none; padding-top: 0; }
