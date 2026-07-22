@@ -194,9 +194,14 @@ drop policy if exists audit_select on audit_log;
 create policy audit_select on audit_log for select to authenticated using (is_platform_admin());
 
 -- 9. MAKE YOURSELF THE SYSTEM ADMINISTRATOR ------------------
--- IMPORTANT: run this ONE line AFTER you have registered + signed in once
--- with your own account (so your profile row exists). Without it, admin.html
--- will only show your OWN results, not everyone's, because step 8 tightened
--- reads. Uncomment and run:
+-- IMPORTANT: run this straight after the block above. Step 8 tightened who
+-- can read results, so without this your admin.html page would show nothing.
+-- This works whether or not you've registered yet: it creates a profile row
+-- for your account (from the email you sign into admin with) if one doesn't
+-- exist, and flags it as the platform administrator. Uncomment the three
+-- lines below (delete the leading "-- "), swap in your admin email if it's
+-- different, and run:
 --
--- update profiles set is_platform_admin = true where email = 'harry.hitchcock@ebi.co.uk';
+-- insert into profiles (id, email, is_platform_admin)
+-- select id, email, true from auth.users where email = 'harry.hitchcock@ebi.co.uk'
+-- on conflict (id) do update set is_platform_admin = true;
