@@ -1522,6 +1522,9 @@ h2 {
 .mvs-tool-tile--blindspot .mvs-tool-icon {
   background: var(--tool-blindspot);
 }
+.mvs-tool-tile--guide .mvs-tool-icon {
+  background: var(--tool-guide);
+}
 
 .mvs-tool-tile h3 {
   margin: 0;
