@@ -432,10 +432,28 @@
       pattern: scoreResult.pattern.key,
       team_code: teamCode && teamCode.trim() ? teamCode.trim() : null,
     };
-    SupabaseClient.insert("submissions", record).then((ok) => {
+    const finish = (ok) => {
       state.cloudSaveStatus = ok ? "ok" : "fail";
       updateCloudSaveNote();
-    });
+    };
+    // Phase 2: if someone is signed in, stamp their account + organisation
+    // on the row and send the insert authenticated (so Row Level Security
+    // accepts it). If not signed in — or the auth layer isn't present —
+    // this saves anonymously exactly as before.
+    const doInsert = (identity) => {
+      let token;
+      if (identity) {
+        record.user_id = identity.userId;
+        record.organisation_id = identity.organisationId;
+        token = identity.accessToken;
+      }
+      SupabaseClient.insert("submissions", record, token).then(finish);
+    };
+    if (typeof Auth !== "undefined" && Auth.isSignedIn()) {
+      Auth.identityForSave().then(doInsert);
+    } else {
+      doInsert(null);
+    }
   }
 
   function updateCloudSaveNote() {
