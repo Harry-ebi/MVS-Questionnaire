@@ -109,25 +109,59 @@
 
   function wireMethodPick() {
     const typeGrid = document.getElementById("mvs-type-grid");
-    typeGrid.innerHTML = dimOrder
-      .map((dim) => {
-        const dc = CONTENT.dimensionContent[dim];
-        const tagline = CONTENT.workingWithGuide[dim].tagline;
-        return `
-          <button type="button" class="mvs-type-btn" data-dimension="${dim}">
-            <span class="mvs-wwd-swatch mvs-wwd-swatch--${dim}"></span>
-            <span class="mvs-type-btn-label">${escapeHtml(dc.label)}-led</span>
-            <span class="mvs-type-btn-tagline">${escapeHtml(tagline)}</span>
+
+    // Single-led options...
+    const singleOptions = dimOrder.map((dim) => ({
+      swatch: [dim],
+      label: `${CONTENT.dimensionContent[dim].label}-led`,
+      tagline: CONTENT.workingWithGuide[dim].tagline,
+      pattern: { type: PATTERN.FOCUSED, primary: dim, secondary: dim, key: `focused_${dim}` },
+    }));
+
+    // ...dual-led blends (like 49 Drive / 48 Clarity)...
+    const pairs = [
+      ["drive", "connection"],
+      ["drive", "clarity"],
+      ["connection", "clarity"],
+    ];
+    const dualOptions = pairs.map(([a, b]) => {
+      const key = orderedPairKey(a, b);
+      return {
+        swatch: [a, b],
+        label: (CONTENT.dualContent[key] || {}).label || `${dimNames[a]} & ${dimNames[b]}`,
+        tagline: c.dualTagline || "A blend of both",
+        pattern: { type: PATTERN.DUAL, primary: a, secondary: b, key: `dual_${key}` },
+      };
+    });
+
+    // ...and balanced.
+    const balancedOption = {
+      swatch: dimOrder.slice(),
+      label: (CONTENT.balancedContent && CONTENT.balancedContent.label) || "Balanced",
+      tagline: c.balancedTagline || "Fairly even across all three",
+      pattern: { type: PATTERN.BALANCED, primary: dimOrder[0], secondary: dimOrder[1], key: "balanced" },
+    };
+
+    const options = singleOptions.concat(dualOptions, [balancedOption]);
+
+    typeGrid.innerHTML = options
+      .map(
+        (opt, i) => `
+          <button type="button" class="mvs-type-btn" data-index="${i}">
+            <span class="mvs-wwd-swatch-row">${opt.swatch
+              .map((d) => `<span class="mvs-wwd-swatch mvs-wwd-swatch--${d}"></span>`)
+              .join("")}</span>
+            <span class="mvs-type-btn-label">${escapeHtml(opt.label)}</span>
+            <span class="mvs-type-btn-tagline">${escapeHtml(opt.tagline)}</span>
           </button>
-        `;
-      })
+        `
+      )
       .join("");
 
     typeGrid.querySelectorAll(".mvs-type-btn").forEach((btn) => {
       btn.addEventListener("click", () => {
-        const dim = btn.getAttribute("data-dimension");
-        const pattern = { type: PATTERN.FOCUSED, primary: dim, secondary: dim, key: `focused_${dim}` };
-        renderGuide(dim, pattern, c.sourcePick);
+        const opt = options[parseInt(btn.getAttribute("data-index"), 10)];
+        renderGuide(opt.pattern, c.sourcePick);
       });
     });
   }
@@ -156,7 +190,7 @@
     document.getElementById("mvs-triangle-confirm").addEventListener("click", () => {
       const pct = handle.getPercentages();
       const pattern = currentPattern(pct);
-      renderGuide(pattern.primary, pattern, c.sourceTriangle(pct.drive, pct.connection, pct.clarity));
+      renderGuide(pattern, c.sourceTriangle(pct.drive, pct.connection, pct.clarity));
     });
   }
 
@@ -179,7 +213,7 @@
       }
       errorNote.hidden = true;
       const pattern = derivePattern(rankDimensions(data.percentages));
-      renderGuide(pattern.primary, pattern, c.sourceUpload(data.name));
+      renderGuide(pattern, c.sourceUpload(data.name));
     });
   }
 
@@ -193,16 +227,40 @@
    * their accurate write-up there, even though the pairwise cards below
    * work off their single leading priority for simplicity).
    */
-  function renderGuide(meDimension, pattern, sourceLine) {
+  // The people you might be communicating with: each single priority, each
+  // dual-led blend, and a balanced profile — so the guide covers blended
+  // people, not just single-driver ones.
+  function buildTargets() {
+    const singles = dimOrder.map((d) => ({ dims: [d], label: CONTENT.dimensionContent[d].label }));
+    const pairs = [
+      ["drive", "connection"],
+      ["drive", "clarity"],
+      ["connection", "clarity"],
+    ];
+    const duals = pairs.map(([a, b]) => ({
+      dims: [a, b],
+      label: (CONTENT.dualContent[orderedPairKey(a, b)] || {}).label || `${dimNames[a]} & ${dimNames[b]}`,
+    }));
+    const balanced = {
+      dims: dimOrder.slice(),
+      label: (CONTENT.balancedContent && CONTENT.balancedContent.label) || "Balanced",
+    };
+    return singles.concat(duals, [balanced]);
+  }
+
+  function renderGuide(pattern, sourceLine) {
     const overview = contentForPattern(pattern);
-    const meLabel = CONTENT.dimensionContent[meDimension].label;
-    const cards = CommsGuidance.buildAllGuidance(meDimension, dimNames);
+    // Blend-aware label: "Drive-led", "Drive & Clarity" or "balanced".
+    const meLabel = CommsGuidance.meBlendLabel(pattern, dimNames);
+    const cards = CommsGuidance.buildAllGuidance(pattern, buildTargets(), dimNames);
 
     const cardsHtml = cards
       .map(
         (card) => `
           <div class="mvs-wwd-card mvs-commguide-card">
-            <div class="mvs-wwd-swatch mvs-wwd-swatch--${card.dimension}"></div>
+            <div class="mvs-wwd-swatch-row">${(card.dims || [])
+              .map((d) => `<span class="mvs-wwd-swatch mvs-wwd-swatch--${d}"></span>`)
+              .join("")}</div>
             <h3>${escapeHtml(card.heading)}</h3>
             <p class="mvs-commguide-field-label">${escapeHtml(c.approachLabel)}</p>
             <ul class="mvs-list">
@@ -221,7 +279,7 @@
     root.innerHTML = `
       <div class="mvs-screen">
         <p class="mvs-eyebrow">${CONTENT.meta.shortName}</p>
-        <h1>${escapeHtml(c.resultHeading(meLabel + "-led"))}</h1>
+        <h1>${escapeHtml(c.resultHeading(meLabel))}</h1>
         <a href="index.html" class="mvs-meta-line mvs-print-hide">&larr; Back to home</a>
 
         <section class="mvs-section">

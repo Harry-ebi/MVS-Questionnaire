@@ -1603,7 +1603,9 @@ const CONTENT = {
       "A guide to working with someone whose priorities differ from your own. Tell us your starting point one of three ways, and we'll generate guidance based on both patterns — plus what to expect meeting someone with a similar pattern to yours.",
     methodsHeading: "Tell us your starting point",
     methodPickTitle: "Pick your pattern",
-    methodPickBody: "Already know your result? Choose it directly.",
+    methodPickBody: "Already know your result? Choose it directly — a single lead, a two-priority blend, or balanced.",
+    dualTagline: "A blend of two priorities",
+    balancedTagline: "Fairly even across all three",
     methodTriangleTitle: "Place yourself on the chart",
     methodTriangleBody: "Not sure, or want to explore? Adjust the scores and we'll work out the pattern as you go.",
     methodTriangleReadoutPrefix: "Currently reads as:",
@@ -1630,6 +1632,7 @@ const CONTENT = {
     cardsIntro: (label) =>
       `Here's how to approach each of the other patterns, plus what to expect meeting someone with a similar ${label} pattern to yours.`,
     selfPairLabel: (label) => `Two ${label} people`,
+    sharedPairLabel: (label) => `Meeting a ${label} person (a blend you share)`,
     approachLabel: "Best approach",
     strengthLabel: "What you bring",
     watchForLabel: "Watch for",
