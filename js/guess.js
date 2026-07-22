@@ -81,7 +81,21 @@
       <ol class="mvs-list" style="padding-left:20px;">
         ${c.howItWorksGuessSteps.map((s) => `<li>${escapeHtml(s)}</li>`).join("")}
       </ol>
+
+      <div id="mvs-guess-team-lookup">
+        <h3 class="mvs-subheading">${escapeHtml(c.teamLookupHeading)}</h3>
+        <label class="mvs-field-label" for="mvs-guess-lookup-code">${escapeHtml(c.teamLookupLabel)}</label>
+        <input type="text" id="mvs-guess-lookup-code" class="mvs-text-input" placeholder="${escapeHtml(
+          c.teamLookupPlaceholder
+        )}" autocomplete="off" />
+        <button type="button" class="mvs-btn mvs-btn--primary" id="mvs-guess-lookup-btn">${escapeHtml(
+          c.teamLookupCta
+        )}</button>
+        <p class="mvs-note" id="mvs-guess-lookup-status" hidden></p>
+      </div>
+
       <form id="mvs-guess-setup-form">
+        <h3 class="mvs-subheading">${escapeHtml(c.manualRosterHeading)}</h3>
         <label class="mvs-field-label" for="mvs-guess-roster">${escapeHtml(c.rosterLabel)}</label>
         <textarea id="mvs-guess-roster" class="mvs-text-input" rows="6" placeholder="${escapeHtml(
           c.rosterPlaceholder
@@ -106,6 +120,17 @@
     const whoSelect = document.getElementById("mvs-who-are-you");
     const parseBtn = document.getElementById("mvs-parse-roster-btn");
     const startBtn = document.getElementById("mvs-start-guessing-btn");
+    const teamCodeInput = document.getElementById("mvs-guess-team-code");
+
+    // Reveal the "which one is you?" picker + Start button for a given
+    // roster — shared by both the manual textarea path and the team-code
+    // autoload path below.
+    function populateRoster(roster) {
+      whoSelect.innerHTML = roster.map((n) => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join("");
+      whoWrap.hidden = false;
+      parseBtn.hidden = true;
+      startBtn.hidden = false;
+    }
 
     parseBtn.addEventListener("click", () => {
       const roster = parseRoster(rosterInput.value);
@@ -113,17 +138,61 @@
         alert("Add at least two names (including yourself) before continuing."); // eslint-disable-line no-alert
         return;
       }
-      whoSelect.innerHTML = roster.map((n) => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join("");
-      whoWrap.hidden = false;
-      parseBtn.hidden = true;
-      startBtn.hidden = false;
+      populateRoster(roster);
+    });
+
+    // Team-code autoload: pull the roster of names already registered under
+    // this team code (whoever's completed the solo reflection with it) so
+    // people don't retype names and risk spelling them differently from the
+    // real result files everything is later matched against by name. Falls
+    // back cleanly to the manual textarea on any failure.
+    const lookupBtn = document.getElementById("mvs-guess-lookup-btn");
+    lookupBtn.addEventListener("click", async () => {
+      const status = document.getElementById("mvs-guess-lookup-status");
+      const code = document.getElementById("mvs-guess-lookup-code").value.trim();
+      if (!code) {
+        status.hidden = false;
+        status.textContent = c.teamLookupEmptyError;
+        return;
+      }
+      if (typeof SupabaseClient === "undefined") {
+        status.hidden = false;
+        status.textContent = c.teamLookupErrorNote;
+        return;
+      }
+      status.hidden = false;
+      status.textContent = "…";
+      lookupBtn.disabled = true;
+      const res = await SupabaseClient.rpc("get_team_submissions", { code });
+      lookupBtn.disabled = false;
+      if (!res.ok) {
+        status.textContent = c.teamLookupErrorNote;
+        return;
+      }
+      // Dedupe: a person can have more than one submission row (e.g. an
+      // Everyday result and a Priorities Under Pressure result) under the
+      // same code — we only want each name once.
+      const names = Array.from(
+        new Set(res.data.map((row) => (typeof row.name === "string" ? row.name.trim() : "")).filter(Boolean))
+      ).sort((a, b) => a.localeCompare(b));
+      if (!names.length) {
+        status.textContent = c.teamLookupNoNamesNote(code);
+        return;
+      }
+      // Mirror the loaded names into the manual box (so they stay visible
+      // and editable) and carry the code forward so the guesses still
+      // auto-save to the same team on completion.
+      rosterInput.value = names.join("\n");
+      teamCodeInput.value = code;
+      populateRoster(names);
+      status.textContent = c.teamLookupLoadedNote(names.length, code);
     });
 
     document.getElementById("mvs-guess-setup-form").addEventListener("submit", (e) => {
       e.preventDefault();
       const roster = parseRoster(rosterInput.value);
       const me = whoSelect.value;
-      const teamCode = document.getElementById("mvs-guess-team-code").value.trim();
+      const teamCode = teamCodeInput.value.trim();
       startGuessingFlow(container, roster, me, teamCode);
     });
   }

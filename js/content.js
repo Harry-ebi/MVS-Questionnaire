@@ -229,7 +229,7 @@ const CONTENT = {
     howItWorksHeading: "How to run this with your team",
     howItWorksGuessSteps: [
       "Open the “Enter your guesses” section below on your own device.",
-      "Type the full list of names taking part (including yourself), then pick which one is you.",
+      "Enter the team code your group used for the solo reflection to load everyone's names automatically (or type them in yourself), then pick which one is you.",
       "If your group is using a team code, enter the same one used on the solo reflection — this saves your guesses automatically, ready for the reveal step.",
       "Place a guess for yourself, then for every teammate, by tapping/dragging on the triangle.",
       "No team code? You can still save a guesses file at the end and add it to your shared folder, alongside everyone's real result files.",
@@ -240,6 +240,18 @@ const CONTENT = {
       "This page matches everything up by name and shows, for each person, their actual result next to everyone's guesses about them.",
     ],
     guessSectionHeading: "Enter your guesses",
+    teamLookupHeading: "Load your team by code",
+    teamLookupLabel: "Team code",
+    teamLookupPlaceholder: "e.g. ATLAS7",
+    teamLookupCta: "Load names",
+    teamLookupEmptyError: "Type the team code your group used for the solo reflection.",
+    teamLookupErrorNote:
+      "Couldn't reach the shared database just now — try again in a moment, or type the names in manually below.",
+    teamLookupNoNamesNote: (code) =>
+      `No names found yet for team code "${code}" — check the code, or make sure teammates have completed the solo reflection with it. You can also type the names in manually below.`,
+    teamLookupLoadedNote: (count, code) =>
+      `Loaded ${count} ${count === 1 ? "name" : "names"} from team code "${code}". Pick which one is you, then start guessing.`,
+    manualRosterHeading: "Or type the names yourself",
     rosterLabel: "Everyone taking part (one name per line, including you)",
     rosterPlaceholder: "Alice\nBob\nPriya\nSam\nJordan",
     yourNameLabel: "Which one is you?",

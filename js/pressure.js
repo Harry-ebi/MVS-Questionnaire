@@ -378,22 +378,55 @@ const PressureFlow = (function () {
     const bandDesc = rc.changeBandDescriptions[bandKey];
     const intensityWord = rc.changeIntensityWord[bandKey];
 
-    const increaseDim = change.largestIncreaseDim;
+    // Body write-up selection — see PROJECT-NOTES "Priorities Under
+    // Pressure body-content mismatch" (Option 3: dominance-led, tie-
+    // blended). The *lead* voice of the report is the dimension that
+    // actually dominates the under-pressure result (end-state dominance,
+    // change.pressurePrimary) rather than whichever rose most by raw
+    // delta (change.largestIncreaseDim) — the two can disagree when a
+    // dimension rises sharply from a low base without overtaking the
+    // leader. When the biggest rise is a genuine near-tie between two
+    // dimensions, the tied one that isn't leading is still woven in as a
+    // secondary thread (a bullet or two per section) rather than dropped.
+    const leadDim = change.pressurePrimary;
     const decreaseDim = change.largestDecreaseDim;
-    const movement = CONTENT.pressureMovement[increaseDim];
+
+    // Secondary thread: the biggest near-tied riser that isn't the lead
+    // (null when there's a single clear riser, i.e. no genuine tie).
+    const tiedSecondaryDim =
+      change.tiedIncreaseDims.length > 1
+        ? change.tiedIncreaseDims
+            .filter((d) => d !== leadDim)
+            .sort((a, b) => change.deltas[b] - change.deltas[a])[0] || null
+        : null;
+
+    const leadMovement = CONTENT.pressureMovement[leadDim];
+    const secondaryMovement = tiedSecondaryDim ? CONTENT.pressureMovement[tiedSecondaryDim] : null;
     const decreaseMovement = CONTENT.pressureMovement[decreaseDim];
 
     const headline = buildHeadline(rc, dimNames, change);
-    const adjectives = rc.increaseAdjectives[increaseDim].join(", ");
+    const adjectives = rc.increaseAdjectives[leadDim].join(", ");
     const summary =
       `In everyday working relationships, your priorities are led by ${rc.everydayFocusPhrase[change.everydayPrimary]}. ` +
-      `When disagreement continues, your priorities shift towards ${rc.pressureFocusPhrase[increaseDim]}. ` +
+      `When disagreement continues, your priorities shift towards ${rc.pressureFocusPhrase[leadDim]}. ` +
       `This is a ${bandLabel.toLowerCase()}, meaning colleagues may experience you as ${intensityWord} more ${adjectives} than they normally expect.`;
 
-    const noticeBullets = movement.increaseNotice.slice(0, 3).concat(decreaseDim !== increaseDim ? [decreaseMovement.decreaseNotice] : []);
-    const valueBullets = movement.increaseValue;
-    const riskBullets = movement.increaseRisk.concat([rc.changeAwarenessRisk(bandLabel)]);
-    const selfMgmtBullets = movement.increaseSelfManagement.concat([rc.selfManagementClosing]);
+    // Each section leads with the dominant dimension's content, then folds
+    // in one supporting bullet from the tied secondary dimension (if any),
+    // keeping the lead voice clearly dominant.
+    const noticeBullets = leadMovement.increaseNotice
+      .slice(0, secondaryMovement ? 2 : 3)
+      .concat(secondaryMovement ? secondaryMovement.increaseNotice.slice(0, 1) : [])
+      .concat(decreaseDim !== leadDim ? [decreaseMovement.decreaseNotice] : []);
+    const valueBullets = leadMovement.increaseValue.concat(
+      secondaryMovement ? secondaryMovement.increaseValue.slice(0, 1) : []
+    );
+    const riskBullets = leadMovement.increaseRisk
+      .concat(secondaryMovement ? secondaryMovement.increaseRisk.slice(0, 1) : [])
+      .concat([rc.changeAwarenessRisk(bandLabel)]);
+    const selfMgmtBullets = leadMovement.increaseSelfManagement
+      .concat(secondaryMovement ? secondaryMovement.increaseSelfManagement.slice(0, 1) : [])
+      .concat([rc.selfManagementClosing]);
 
     root.innerHTML = `
       <div class="mvs-screen mvs-screen--results" id="mvs-pressure-results-capture">
@@ -463,7 +496,7 @@ const PressureFlow = (function () {
 
         <section class="mvs-section">
           <h2 class="mvs-section-title">${escapeHtmlLocal(rc.sectionHeadings.howColleaguesCanWork)}</h2>
-          <p class="mvs-note">${escapeHtmlLocal(movement.colleaguesGuidance)}</p>
+          <p class="mvs-note">${escapeHtmlLocal(leadMovement.colleaguesGuidance)}</p>
         </section>
 
         ${renderListSection(rc.sectionHeadings.reflection, rc.reflectionQuestions)}
