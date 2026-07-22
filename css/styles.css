@@ -1851,3 +1851,198 @@ h2 {
     break-after: avoid-page;
   }
 }
+
+/* -------------------------------------------------------------------
+   Phase 2 — accounts & organisations UI
+   Uses the shared theme tokens above, so light + dark both work with no
+   per-theme rules here (same approach as the rest of this stylesheet).
+   ------------------------------------------------------------------- */
+
+/* Navigation row (under the brand header) */
+.mvs-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  align-items: center;
+  justify-content: space-between;
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 8px 20px 0;
+}
+.mvs-nav-left,
+.mvs-nav-right {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  align-items: center;
+}
+.mvs-nav-link {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-decoration: none;
+  padding: 6px 4px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+.mvs-nav-link:hover {
+  color: var(--accent-soft);
+}
+.mvs-nav-link.is-active {
+  color: var(--accent-soft);
+  border-bottom: 2px solid var(--accent-soft);
+}
+.mvs-nav-link--cta {
+  color: var(--accent-contrast);
+  background: var(--accent);
+  border-radius: var(--radius-sm);
+  padding: 6px 12px;
+}
+.mvs-nav-link--cta:hover {
+  color: var(--accent-contrast);
+  background: var(--accent-deep);
+}
+.mvs-nav-who {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Auth + account forms */
+.mvs-auth-form {
+  display: block;
+  max-width: 420px;
+}
+.mvs-form-row {
+  margin-bottom: 14px;
+}
+.mvs-form-row .mvs-text-input {
+  width: 100%;
+  box-sizing: border-box;
+}
+.mvs-field-hint {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin: 4px 0 0;
+}
+.mvs-form-split {
+  display: flex;
+  gap: 12px;
+}
+.mvs-form-split > .mvs-form-row {
+  flex: 1;
+}
+.mvs-message {
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  font-size: 0.9rem;
+  margin: 0 0 14px;
+}
+.mvs-message--error {
+  background: rgba(197, 48, 48, 0.1);
+  border: 1px solid rgba(197, 48, 48, 0.35);
+  color: #c53030;
+}
+.mvs-message--success {
+  background: rgba(15, 122, 108, 0.12);
+  border: 1px solid rgba(15, 122, 108, 0.35);
+  color: var(--series-clarity);
+}
+.mvs-auth-alt {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  margin-top: 16px;
+}
+.mvs-auth-alt a {
+  color: var(--accent-soft);
+  font-weight: 600;
+}
+
+/* Account dashboard */
+.mvs-stat-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 4px 0 8px;
+}
+.mvs-stat {
+  flex: 1 1 120px;
+  background: var(--surface-card);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+}
+.mvs-stat-value {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--accent-soft);
+  line-height: 1.1;
+}
+.mvs-stat-label {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+.mvs-org-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface-card);
+  border: 1px solid var(--border-hairline);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.mvs-role-tag {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--accent-contrast);
+  background: var(--accent-soft);
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+.mvs-history-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+.mvs-history-table th,
+.mvs-history-table td {
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border-hairline);
+}
+.mvs-history-table th {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-muted);
+}
+.mvs-history-empty {
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+/* Home hero: group the account + admin pills together, top-right */
+.mvs-hero-links {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 2;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.mvs-hero-admin-link--inline {
+  position: static;
+  top: auto;
+  right: auto;
+}

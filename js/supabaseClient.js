@@ -34,12 +34,18 @@ const SupabaseClient = (function () {
     };
   }
 
-  /** Insert one row into `table`. Returns true/false, never throws. */
-  async function insert(table, record) {
+  /**
+   * Insert one row into `table`. Returns true/false, never throws.
+   * Pass `accessToken` to insert AS a signed-in user (so Row Level
+   * Security policies that check auth.uid() apply). Omit it and the
+   * insert runs as the anonymous role, exactly as before — this keeps
+   * the existing anonymous reflection save working unchanged.
+   */
+  async function insert(table, record, accessToken) {
     try {
       const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
         method: "POST",
-        headers: { ...restHeaders(), Prefer: "return=minimal" },
+        headers: { ...restHeaders(accessToken), Prefer: "return=minimal" },
         body: JSON.stringify(record),
       });
       return res.ok;
@@ -139,7 +145,165 @@ const SupabaseClient = (function () {
     }
   }
 
-  return { insert, rpc, signIn, selectAll, remove };
+  // =========================================================
+  // Phase 2 additions — accounts & organisations.
+  // All of these fail soft (return null / { ok:false }) exactly like
+  // the methods above; a caller should always handle the failure case.
+  // =========================================================
+
+  /**
+   * Create a new account via Supabase Auth. `metadata` (e.g. first_name,
+   * last_name) is stored on the auth user and read by the database
+   * sign-up trigger to build the profile + personal organisation.
+   * Returns the parsed response (which may contain a session, or just a
+   * user awaiting email confirmation, depending on the project's
+   * "Confirm email" setting) on success, or null on failure.
+   */
+  async function signUp(email, password, metadata) {
+    try {
+      const res = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
+        method: "POST",
+        headers: { apikey: SUPABASE_PUBLISHABLE_KEY, "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password, data: metadata || {} }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) return { ok: false, error: (data && (data.msg || data.error_description || data.message)) || "Sign-up failed" };
+      return { ok: true, data };
+    } catch (err) {
+      console.warn("Supabase sign-up failed:", err);
+      return { ok: false, error: "Could not reach the server." };
+    }
+  }
+
+  /** Sign the current session out (best effort). */
+  async function signOut(accessToken) {
+    try {
+      await fetch(`${SUPABASE_URL}/auth/v1/logout`, {
+        method: "POST",
+        headers: restHeaders(accessToken),
+      });
+      return true;
+    } catch (err) {
+      console.warn("Supabase sign-out failed:", err);
+      return false;
+    }
+  }
+
+  /** Exchange a refresh token for a fresh session. Returns session or null. */
+  async function refresh(refreshToken) {
+    try {
+      const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+        method: "POST",
+        headers: { apikey: SUPABASE_PUBLISHABLE_KEY, "Content-Type": "application/json" },
+        body: JSON.stringify({ refresh_token: refreshToken }),
+      });
+      if (!res.ok) return null;
+      return await res.json();
+    } catch (err) {
+      console.warn("Supabase token refresh failed:", err);
+      return null;
+    }
+  }
+
+  /** Fetch the auth user for an access token. Returns user object or null. */
+  async function getUser(accessToken) {
+    try {
+      const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+        headers: restHeaders(accessToken),
+      });
+      if (!res.ok) return null;
+      return await res.json();
+    } catch (err) {
+      console.warn("Supabase getUser failed:", err);
+      return null;
+    }
+  }
+
+  /**
+   * Ask Supabase to send a password-reset email. This is intentionally a
+   * "placeholder" flow for now: the request is accepted, but no email is
+   * actually delivered until SMTP is configured in the Supabase dashboard.
+   * We deliberately don't reveal whether the address exists.
+   */
+  async function resetPassword(email, redirectTo) {
+    try {
+      const res = await fetch(`${SUPABASE_URL}/auth/v1/recover`, {
+        method: "POST",
+        headers: { apikey: SUPABASE_PUBLISHABLE_KEY, "Content-Type": "application/json" },
+        body: JSON.stringify(redirectTo ? { email, gotrue_meta_security: {} , redirect_to: redirectTo } : { email }),
+      });
+      return res.ok;
+    } catch (err) {
+      console.warn("Supabase password reset failed:", err);
+      return false;
+    }
+  }
+
+  /**
+   * Update the signed-in auth user (used here to change password:
+   * updateUser(token, { password: "..." })). Returns { ok, error }.
+   */
+  async function updateUser(accessToken, attrs) {
+    try {
+      const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+        method: "PUT",
+        headers: restHeaders(accessToken),
+        body: JSON.stringify(attrs),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) return { ok: false, error: (data && (data.msg || data.error_description || data.message)) || "Update failed" };
+      return { ok: true, data };
+    } catch (err) {
+      console.warn("Supabase updateUser failed:", err);
+      return { ok: false, error: "Could not reach the server." };
+    }
+  }
+
+  /**
+   * Authenticated SELECT with a raw PostgREST query string (e.g.
+   * "user_id=eq.<id>&order=created_at.desc"). Row Level Security decides
+   * what actually comes back. Returns { ok, data, status }; data is
+   * always an array.
+   */
+  async function select(table, query, accessToken) {
+    try {
+      const qs = query ? `&${query}` : "";
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?select=*${qs}`, {
+        headers: restHeaders(accessToken),
+      });
+      if (!res.ok) return { ok: false, data: [], status: res.status };
+      const data = await res.json();
+      return { ok: true, data: Array.isArray(data) ? data : [], status: res.status };
+    } catch (err) {
+      console.warn(`Supabase select from "${table}" failed:`, err);
+      return { ok: false, data: [], status: null };
+    }
+  }
+
+  /**
+   * Authenticated UPDATE. `match` is a PostgREST filter (e.g. "id=eq.<id>").
+   * Returns { ok, status }. RLS decides whether the row is actually
+   * writable by this user.
+   */
+  async function update(table, match, patch, accessToken) {
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${match}`, {
+        method: "PATCH",
+        headers: { ...restHeaders(accessToken), Prefer: "return=minimal" },
+        body: JSON.stringify(patch),
+      });
+      return { ok: res.ok, status: res.status };
+    } catch (err) {
+      console.warn(`Supabase update on "${table}" failed:`, err);
+      return { ok: false, status: null };
+    }
+  }
+
+  return {
+    insert, rpc, signIn, selectAll, remove,
+    // Phase 2
+    signUp, signOut, refresh, getUser, resetPassword, updateUser, select, update,
+  };
 })();
 
 if (typeof module !== "undefined" && module.exports) {

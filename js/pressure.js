@@ -564,10 +564,27 @@ const PressureFlow = (function () {
       largest_decrease_dimension: change.largestDecreaseDim,
       team_code: teamCode && teamCode.trim() ? teamCode.trim() : null,
     };
-    SupabaseClient.insert("submissions", record).then((ok) => {
+    const finish = (ok) => {
       pressureState.cloudSaveStatus = ok ? "ok" : "fail";
       updateCloudSaveNote();
-    });
+    };
+    // Phase 2: link to the signed-in account + organisation when present,
+    // and send the insert authenticated so Row Level Security accepts it.
+    // Not signed in (or no auth layer) -> saves anonymously, as before.
+    const doInsert = (identity) => {
+      let token;
+      if (identity) {
+        record.user_id = identity.userId;
+        record.organisation_id = identity.organisationId;
+        token = identity.accessToken;
+      }
+      SupabaseClient.insert("submissions", record, token).then(finish);
+    };
+    if (typeof Auth !== "undefined" && Auth.isSignedIn()) {
+      Auth.identityForSave().then(doInsert);
+    } else {
+      doInsert(null);
+    }
   }
 
   function updateCloudSaveNote() {
