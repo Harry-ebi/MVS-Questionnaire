@@ -14,18 +14,9 @@
   <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
+  <div id="mvs-header"></div>
   <div class="mvs-hero-band">
     <div class="mvs-hero-shape" aria-hidden="true"></div>
-    <div class="mvs-hero-links">
-      <a href="login.html" id="home-account-link" class="mvs-hero-admin-link mvs-hero-admin-link--inline"></a>
-      <a href="#" id="home-admin-link" class="mvs-hero-admin-link mvs-hero-admin-link--inline">
-        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <rect x="5" y="11" width="14" height="9" rx="2" />
-          <path d="M8 11V7a4 4 0 0 1 8 0v4" />
-        </svg>
-        <span id="home-admin-link-label"></span>
-      </a>
-    </div>
     <div class="mvs-hero-content">
       <svg class="mvs-hero-logo" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Conversa logo">
         <path class="cv-arc cv-arc--navy" stroke-width="7" d="M12,26 A21,21 0 0 1 50,21" />
@@ -46,18 +37,11 @@
   <script src="js/content.js"></script>
   <script src="js/supabaseClient.js"></script>
   <script src="js/auth.js"></script>
+  <script src="js/nav.js"></script>
   <script>
-    (function () {
-      // Auth-aware account pill: "Your account" when signed in, else "Sign in".
-      try {
-        var accLink = document.getElementById("home-account-link");
-        if (accLink) {
-          var signedIn = typeof Auth !== "undefined" && Auth.isSignedIn();
-          accLink.textContent = signedIn ? CONTENT.home.accountLabel : CONTENT.home.signInLabel;
-          accLink.href = signedIn ? "account.html" : "login.html";
-        }
-      } catch (e) {}
-    })();
+    Nav.mount({ active: "home" });
+  </script>
+  <script>
     (function () {
       // Simple inline glyphs — one per tool tile, white strokes on a
       // solid colour circle. Deliberately plain/geometric, drawn inline
@@ -93,12 +77,6 @@
       const c = CONTENT.home;
       document.getElementById("home-hero-title").textContent = c.title;
       document.getElementById("home-hero-lead").textContent = c.intro;
-
-      const adminLink = document.getElementById("home-admin-link");
-      adminLink.href = c.adminLinkHref;
-      adminLink.title = c.adminLinkLabel;
-      adminLink.setAttribute("aria-label", c.adminLinkLabel);
-      document.getElementById("home-admin-link-label").textContent = c.adminLinkShort;
 
       const [featuredCard, ...restCards] = c.cards;
 

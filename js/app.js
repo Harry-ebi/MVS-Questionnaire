@@ -118,6 +118,17 @@
   }
 
   function renderNameCapture() {
+    // Signed-in people shouldn't have to re-type details we already hold.
+    // Show the streamlined, pre-filled version; fall back to the classic
+    // anonymous name+team-code capture for everyone else.
+    if (typeof Auth !== "undefined" && Auth.isSignedIn()) {
+      renderNameCaptureSignedIn();
+    } else {
+      renderNameCaptureAnonymous();
+    }
+  }
+
+  function renderNameCaptureAnonymous() {
     const c = CONTENT.nameCapture;
     root.innerHTML = `
       <div class="mvs-screen mvs-screen--name">
@@ -158,6 +169,124 @@
       state.teamCode = document.getElementById("mvs-team-code-input").value.trim();
       goTo("questionnaire");
     });
+  }
+
+  function renderNameCaptureSignedIn() {
+    const c = CONTENT.nameCapture;
+    const s = c.signedIn || {};
+    // Render the shell immediately, then fill it once we know the profile
+    // and organisation. Keeps the screen responsive even on a slow network.
+    root.innerHTML = `
+      <div class="mvs-screen mvs-screen--name">
+        <a href="account.html" class="mvs-meta-line">&larr; ${escapeHtml(s.backLink || "Back to your account")}</a>
+        <h1 id="mvs-si-title">${escapeHtml(s.title || "Ready when you are")}</h1>
+        <p class="mvs-lead">${escapeHtml(s.body || "We've filled in your details — change them if you like.")}</p>
+        <form id="mvs-name-form" novalidate>
+          <label class="mvs-field-label" for="mvs-name-input">${escapeHtml(s.nameLabel || "Your name")}</label>
+          <input type="text" id="mvs-name-input" class="mvs-text-input" value="${escapeHtml(state.respondentName)}" autocomplete="name" />
+          <p class="mvs-note" id="mvs-name-error" hidden></p>
+
+          <label class="mvs-field-label" for="mvs-team-code-input">${escapeHtml(s.teamLabel || "Team code")}</label>
+          <p class="mvs-note" id="mvs-si-teamhint">${escapeHtml(s.teamHintPersonal || "")}</p>
+          <input type="text" id="mvs-team-code-input" class="mvs-text-input" value="${escapeHtml(state.teamCode)}" autocomplete="off" placeholder="${escapeHtml(s.teamPlaceholder || "")}" />
+
+          <div id="mvs-si-confirm" hidden></div>
+
+          <button type="submit" class="mvs-btn mvs-btn--primary" id="mvs-name-continue">${escapeHtml(c.continueCta)}</button>
+        </form>
+      </div>
+    `;
+
+    // Remember what we pre-filled so we can detect edits.
+    let prefilled = { name: "", team: "", displayName: "" };
+
+    Auth.loadContext()
+      .then((ctx) => {
+        if (!ctx) return;
+        const dn = (ctx.profile && ctx.profile.display_name) || "";
+        const org = ctx.activeOrg;
+        const isPersonal = org && org.is_personal;
+        const teamCode = org && !isPersonal && org.slug ? org.slug : "";
+        prefilled = { name: dn, team: teamCode, displayName: dn };
+
+        const nameInput = document.getElementById("mvs-name-input");
+        const teamInput = document.getElementById("mvs-team-code-input");
+        const hint = document.getElementById("mvs-si-teamhint");
+        const title = document.getElementById("mvs-si-title");
+        // Only overwrite the fields if the person hasn't already typed.
+        if (nameInput && !nameInput.value) nameInput.value = dn;
+        if (teamInput && !teamInput.value) teamInput.value = teamCode;
+        if (title && dn) title.textContent = (s.titleNamed || "Ready when you are, {name}").replace("{name}", dn.split(" ")[0]);
+        if (hint) {
+          hint.textContent = isPersonal
+            ? (s.teamHintPersonal || "You're in your personal workspace — leave this blank.")
+            : (s.teamHintOrg || "Pre-filled from your organisation: {org}.").replace("{org}", (org && org.name) || "");
+        }
+      })
+      .catch(() => {});
+
+    const form = document.getElementById("mvs-name-form");
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const nameInput = document.getElementById("mvs-name-input");
+      const teamInput = document.getElementById("mvs-team-code-input");
+      const errorNote = document.getElementById("mvs-name-error");
+      const name = nameInput.value.trim();
+      if (!name) {
+        errorNote.hidden = false;
+        errorNote.textContent = c.errorNote;
+        return;
+      }
+      const team = teamInput.value.trim();
+
+      // If they changed the name from what's on their account, offer to
+      // save it back — otherwise it only applies to this one profile.
+      const changedName =
+        prefilled.displayName && name !== prefilled.displayName;
+      if (changedName && !form.dataset.nameResolved) {
+        showNameOverwritePrompt(name, () => proceed(name, team));
+        return;
+      }
+      proceed(name, team);
+    });
+
+    function proceed(name, team) {
+      state.respondentName = name;
+      state.teamCode = team;
+      goTo("questionnaire");
+    }
+
+    function showNameOverwritePrompt(newName, done) {
+      const box = document.getElementById("mvs-si-confirm");
+      form.dataset.nameResolved = "1";
+      box.hidden = false;
+      box.className = "mvs-message mvs-message--info";
+      box.innerHTML = `
+        <p style="margin:0 0 8px;">${escapeHtml((s.overwriteAsk || "Update the name on your account to “{name}”?").replace("{name}", newName))}</p>
+        <div class="mvs-btn-row">
+          <button type="button" class="mvs-btn mvs-btn--small mvs-btn--primary" id="mvs-si-save">${escapeHtml(s.overwriteYes || "Update my account")}</button>
+          <button type="button" class="mvs-btn mvs-btn--small mvs-btn--ghost" id="mvs-si-once">${escapeHtml(s.overwriteNo || "Just this time")}</button>
+        </div>
+      `;
+      document.getElementById("mvs-si-once").addEventListener("click", () => done());
+      document.getElementById("mvs-si-save").addEventListener("click", async () => {
+        try {
+          const token = await Auth.getAccessToken();
+          const user = Auth.currentUser();
+          if (token && user) {
+            await SupabaseClient.update(
+              "profiles",
+              `id=eq.${user.id}`,
+              { display_name: newName, updated_at: new Date().toISOString() },
+              token
+            );
+          }
+        } catch (err) {
+          /* best effort — proceed regardless */
+        }
+        done();
+      });
+    }
   }
 
   function currentQuestion() {

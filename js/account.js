@@ -257,6 +257,6 @@
       token
     );
     render(ctx, subRes.ok ? subRes.data : []);
-    if (typeof Nav !== "undefined") Nav.render("mvs-nav-slot", { active: "account" });
+    if (typeof Nav !== "undefined") Nav.mount({ active: "account", crumbs: [{ label: "Home", href: "index.html" }, { label: "Your account" }] });
   })();
 })();

@@ -38,8 +38,12 @@ const CONTENT = {
   nav: {
     home: "Home",
     reflection: "Communication Profile",
+    perception: "Perception Check",
+    team: "Team Insights",
     guide: "Guide",
     account: "Account",
+    admin: "Admin",
+    menu: "Menu",
     signIn: "Sign in",
     register: "Create account",
     signOut: "Sign out",
@@ -458,6 +462,21 @@ const CONTENT = {
       "Only fill this in if a facilitator gave you one for a team exercise — it lets your result join that team's shared overlay automatically. Leave it blank for purely personal use.",
     teamCodePlaceholder: "e.g. ATLAS7 — leave blank if you don't have one",
     continueCta: "Continue",
+    // Shown to signed-in people — details pre-filled from their account.
+    signedIn: {
+      backLink: "Back to your account",
+      title: "Ready when you are",
+      titleNamed: "Ready when you are, {name}",
+      body: "We've pre-filled your details from your account — change them here if you'd like, and this profile will be saved to your history.",
+      nameLabel: "Your name",
+      teamLabel: "Team",
+      teamHintPersonal: "You're in your personal workspace, so there's no team to join — leave this blank.",
+      teamHintOrg: "Pre-filled from your organisation: {org}.",
+      teamPlaceholder: "",
+      overwriteAsk: "You changed your name to “{name}”. Update the name on your account too, or just use it for this profile?",
+      overwriteYes: "Update my account",
+      overwriteNo: "Just this profile",
+    },
   },
 
   progress: {
