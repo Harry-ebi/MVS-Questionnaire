@@ -15,12 +15,18 @@
   --border-hairline: rgba(42, 47, 51, 0.12);
   --gridline: #e2e8f0;
 
-  --accent: #2c5282; /* Corporate blue — solid buttons (good contrast w/ white text) */
-  --accent-soft: #2b6cb0; /* Brighter blue — borders, links, progress fill */
+  --accent: #2456c9; /* Royal blue (from the Conversa logo) — solid buttons (good contrast w/ white text) */
+  --accent-soft: #2a63cf; /* Blue — borders, links, progress fill */
   --accent-light: #bcd6ef; /* Light blue — subtle tints, hover backgrounds */
-  --accent-deep: #1a365d; /* Deep navy — bold brand panels (e.g. the home page hero band), always paired with light/white text */
+  --accent-deep: #17305e; /* Deep navy (logo) — bold brand panels (e.g. the home page hero band), always paired with light/white text */
   --accent-contrast: #ffffff;
-  --brand-secondary: #3182ce; /* Secondary blue accent (logo tall bar, taglines, gradient) */
+  --brand-secondary: #2f6fe6; /* Vivid logo blue — taglines, header accent line, gradient */
+
+  /* Conversa logo mark colours — theme-aware so the navy/blue/light-blue
+     speech-bubble mark reads on both the light card and the dark card. */
+  --mark-dark: #17305e; /* navy arc + dots */
+  --mark-blue: #2f6fe6; /* royal-blue arc + chat tail */
+  --mark-light: #a9c6e8; /* light-blue accent arc */
 
   /* Tool-tile icon colours — a neutral navy→blue ramp (deep → medium →
      bright) for the three solo/team/blind-spot tools, ranked darkest-first
@@ -30,9 +36,9 @@
      purpose: those tokens shift slightly in dark mode for on-page
      text/link contrast, but these sit inside solid colour circles and
      should stay constant in both themes. */
-  --tool-reflection: #1a365d; /* Deep navy — the featured/primary tool */
-  --tool-team: #2c5282; /* Corporate blue */
-  --tool-blindspot: #3182ce; /* Bright blue */
+  --tool-reflection: #17305e; /* Deep navy — the featured/primary tool */
+  --tool-team: #2456c9; /* Corporate blue */
+  --tool-blindspot: #2f6fe6; /* Bright blue */
   --tool-guide: #2c7a7b; /* Teal, for contrast with the white icon strokes and to set the guide apart */
 
   /* Chart series colours are a separate, deliberately validated system
@@ -63,12 +69,18 @@
     --border-hairline: rgba(255, 255, 255, 0.12);
     --gridline: #2a303a;
 
-    --accent: #2c5282;
+    --accent: #2f6fe6;
     --accent-soft: #7fb0e0;
     --accent-light: #3a5570;
-    --accent-deep: #1a365d;
+    --accent-deep: #17305e;
     --accent-contrast: #ffffff;
     --brand-secondary: #63b3ed;
+
+    /* Mark colours flip lighter on the dark card so the navy arc/dots
+       don't disappear; hero override still forces pure white on navy. */
+    --mark-dark: #dbe7f7;
+    --mark-blue: #6aa6f0;
+    --mark-light: #4a6b8a;
 
     --series-drive: #e3a640;
     --series-connection: #c4a3ec;
@@ -135,28 +147,41 @@ body {
   flex-shrink: 0;
 }
 
-/* The logo mark itself: three simple ascending, pill-ended bars — a
-   plain, original growth/analytics glyph, chosen deliberately for how
-   cleanly it reduces: no fine detail, crossing lines or overlapping
-   shapes to lose at a 27px header size. The two shorter bars pick up the
-   same blue as the wordmark next to them; the tallest bar uses the
-   secondary blue that matches the tagline underneath it, so the icon and
-   the wordmark read as one deliberately co-ordinated unit rather than two
-   separately coloured elements sitting side by side. */
-.mvs-brand-mark-bar {
-  fill: var(--accent-soft);
+/* The Conversa logo mark: a two-tone speech-bubble ring (a navy arc over
+   the top, a light-blue accent arc on the right, and a royal-blue arc
+   sweeping the bottom into a chat tail) around three dots. Colours come
+   from the theme-aware --mark-* tokens so the mark stays legible in both
+   light and dark mode; the arcs and dots use `currentColor`-free tokens
+   rather than page text colour so they always read as the brand. */
+.cv-arc {
+  fill: none;
+  stroke-linecap: round;
+}
+.cv-arc--navy {
+  stroke: var(--mark-dark);
+}
+.cv-arc--blue {
+  stroke: var(--mark-blue);
+}
+.cv-arc--light {
+  stroke: var(--mark-light);
+}
+.cv-tail {
+  fill: var(--mark-blue);
+}
+.cv-dot {
+  fill: var(--mark-dark);
 }
 
-.mvs-brand-mark-bar--accent {
-  fill: var(--brand-secondary);
+/* On the home page's dark hero band the mark is always white, regardless
+   of the app's light/dark theme — the same "fixed tone on a fixed-colour
+   surface" approach already used for the hero band's other text, since
+   that panel never itself changes colour between themes. */
+.mvs-hero-logo .cv-arc {
+  stroke: #ffffff;
 }
-
-/* On the home page's dark hero band the mark is always white,
-   regardless of the app's light/dark theme — the same "fixed tone on a
-   fixed-colour surface" approach already used for the hero band's other
-   text (see .mvs-hero-word/.mvs-hero-title below), since that panel
-   never itself changes colour between themes. */
-.mvs-hero-logo .mvs-brand-mark-bar {
+.mvs-hero-logo .cv-tail,
+.mvs-hero-logo .cv-dot {
   fill: #ffffff;
 }
 
@@ -169,7 +194,7 @@ body {
 .mvs-brand-header .mvs-brand-word strong {
   font-size: 1.15rem;
   font-weight: 800;
-  color: var(--accent-soft);
+  color: var(--mark-dark);
   letter-spacing: 0.01em;
 }
 
@@ -1701,10 +1726,10 @@ h2 {
     --text-muted: #6b7278;
     --border-hairline: rgba(42, 47, 51, 0.25);
     --gridline: #dfe3e8;
-    --accent: #2c5282;
-    --accent-soft: #2b6cb0;
+    --accent: #2456c9;
+    --accent-soft: #2a63cf;
     --accent-contrast: #ffffff;
-    --brand-secondary: #2c5282;
+    --brand-secondary: #2456c9;
   }
 
   * {
