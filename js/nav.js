@@ -172,11 +172,29 @@ const Nav = (function () {
       });
     }
 
-    // Reveal Admin inside the account dropdown, only for a platform admin.
+    // Once we know the account's role: reveal the Organisation section
+    // link (org admins of a real organisation) and the Admin item in the
+    // account dropdown (platform admins only).
     if (signedIn && typeof Auth !== "undefined") {
       Auth.loadContext()
         .then((ctx) => {
-          if (ctx && ctx.profile && ctx.profile.is_platform_admin && accountMenu && !document.getElementById("mvs-nav-admin")) {
+          if (!ctx) return;
+          const primary = el.querySelector(".mvs-nav-primary");
+          if (
+            primary &&
+            ctx.role === "org_admin" &&
+            ctx.activeOrg &&
+            !ctx.activeOrg.is_personal &&
+            !document.getElementById("mvs-nav-org")
+          ) {
+            const o = document.createElement("a");
+            o.id = "mvs-nav-org";
+            o.className = "mvs-nav-link" + (active === "organisation" ? " is-active" : "");
+            o.href = "organisation.html";
+            o.textContent = c.organisation || "Organisation";
+            primary.appendChild(o);
+          }
+          if (ctx.profile && ctx.profile.is_platform_admin && accountMenu && !document.getElementById("mvs-nav-admin")) {
             const a = document.createElement("a");
             a.id = "mvs-nav-admin";
             a.className = "mvs-account-item" + (active === "admin" ? " is-active" : "");

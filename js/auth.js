@@ -27,6 +27,7 @@
 
 const Auth = (function () {
   const SESSION_KEY = "conversa_session_v1";
+  const ACTIVE_ORG_KEY = "conversa_active_org_v1";
   const REFRESH_SKEW_SECONDS = 60; // refresh this many seconds before expiry
 
   // In-memory cache of the loaded context, so pages don't refetch on
@@ -204,8 +205,14 @@ const Auth = (function () {
     const memberships = memRes.ok ? memRes.data : [];
     const organisations = orgRes.ok ? orgRes.data : [];
 
-    // Active organisation: prefer the personal one, else the first.
-    let activeOrg = organisations.find((o) => o.is_personal) || organisations[0] || null;
+    // Active organisation: a remembered choice (if still a member), else
+    // the personal workspace, else the first.
+    const storedId = getActiveOrgId();
+    let activeOrg =
+      (storedId && organisations.find((o) => o.id === storedId)) ||
+      organisations.find((o) => o.is_personal) ||
+      organisations[0] ||
+      null;
     let role = "member";
     if (activeOrg) {
       const m = memberships.find((mm) => mm.organisation_id === activeOrg.id);
@@ -214,6 +221,67 @@ const Auth = (function () {
 
     context = { profile, memberships, organisations, activeOrg, role };
     return context;
+  }
+
+  function getActiveOrgId() {
+    try {
+      return window.localStorage.getItem(ACTIVE_ORG_KEY) || null;
+    } catch (err) {
+      return null;
+    }
+  }
+
+  /** Remember which organisation is "active" and clear the cached context. */
+  function setActiveOrg(orgId) {
+    try {
+      if (orgId) window.localStorage.setItem(ACTIVE_ORG_KEY, orgId);
+      else window.localStorage.removeItem(ACTIVE_ORG_KEY);
+    } catch (err) {
+      /* ignore */
+    }
+    context = null;
+  }
+
+  /**
+   * Create a new organisation owned by the current user and make them its
+   * admin, then switch to it. Returns { ok, org } or { ok:false, error }.
+   */
+  async function createOrganisation(name) {
+    const token = await getAccessToken();
+    const user = currentUser();
+    if (!token || !user) return { ok: false, error: "Please sign in again." };
+    const clean = (name || "").trim();
+    if (!clean) return { ok: false, error: "Please enter an organisation name." };
+
+    const orgId =
+      window.crypto && window.crypto.randomUUID
+        ? window.crypto.randomUUID()
+        : "org-" + Date.now() + "-" + Math.floor(Math.random() * 1e6);
+    const slug =
+      clean
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .slice(0, 40) +
+      "-" +
+      Math.random().toString(36).slice(2, 6);
+
+    const orgOk = await SupabaseClient.insert(
+      "organisations",
+      { id: orgId, name: clean, slug: slug, owner_id: user.id, is_personal: false },
+      token
+    );
+    if (!orgOk) return { ok: false, error: "Couldn't create the organisation. Please try again." };
+
+    const memOk = await SupabaseClient.insert(
+      "memberships",
+      { user_id: user.id, organisation_id: orgId, role: "org_admin" },
+      token
+    );
+    if (!memOk) return { ok: false, error: "Organisation created, but adding you as admin failed. Please refresh." };
+
+    setActiveOrg(orgId);
+    return { ok: true, org: { id: orgId, name: clean, slug: slug, is_personal: false, owner_id: user.id } };
   }
 
   /**
@@ -266,6 +334,9 @@ const Auth = (function () {
     loadContext,
     identityForSave,
     requireAuth,
+    getActiveOrgId,
+    setActiveOrg,
+    createOrganisation,
   };
 })();
 

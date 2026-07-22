@@ -47,6 +47,66 @@
     return `${Math.round(row.drive)} / ${Math.round(row.connection)} / ${Math.round(row.clarity)}`;
   }
 
+  function roleFor(ctx, orgId) {
+    const m = (ctx.memberships || []).find((mm) => mm.organisation_id === orgId);
+    return m ? m.role : "member";
+  }
+
+  function renderOrgsList(ctx) {
+    const cc = c();
+    const orgs = ctx.organisations || [];
+    const activeId = ctx.activeOrg ? ctx.activeOrg.id : null;
+    if (!orgs.length) return `<p class="mvs-history-empty">${esc(cc.orgsEmpty)}</p>`;
+    return `<ul class="mvs-org-list">${orgs
+      .map((o) => {
+        const role = roleFor(ctx, o.id);
+        const isActive = o.id === activeId;
+        const roleLabel = role === "org_admin" ? cc.roleOrgAdmin : cc.roleMember;
+        const canDash = role === "org_admin" && !o.is_personal;
+        return `
+          <li class="mvs-org-row${isActive ? " is-active" : ""}">
+            <div class="mvs-org-row-main">
+              <span class="mvs-org-name">${esc(o.name)}</span>
+              <span class="mvs-role-tag">${esc(roleLabel)}</span>
+              ${isActive ? `<span class="mvs-org-active-tag">${esc(cc.activeTag)}</span>` : ""}
+            </div>
+            <div class="mvs-org-row-actions">
+              ${canDash ? `<a class="mvs-btn mvs-btn--small mvs-btn--ghost" href="organisation.html">${esc(cc.openDashboard)}</a>` : ""}
+              ${!isActive ? `<button type="button" class="mvs-btn mvs-btn--small mvs-btn--ghost mvs-org-switch" data-org="${esc(o.id)}">${esc(cc.switchCta)}</button>` : ""}
+            </div>
+          </li>`;
+      })
+      .join("")}</ul>`;
+  }
+
+  function wireOrgs() {
+    const cc = c();
+    document.querySelectorAll(".mvs-org-switch").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        Auth.setActiveOrg(btn.getAttribute("data-org"));
+        window.location.reload();
+      });
+    });
+    const form = document.getElementById("mvs-create-org-form");
+    if (form) {
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const name = document.getElementById("mvs-new-org").value;
+        const btn = document.getElementById("mvs-create-org-btn");
+        btn.disabled = true;
+        btn.textContent = cc.saving;
+        const res = await Auth.createOrganisation(name);
+        if (res.ok) {
+          window.location.reload();
+        } else {
+          msg("mvs-org-msg", "error", res.error || cc.detailsFailed);
+          btn.disabled = false;
+          btn.textContent = cc.createCta;
+        }
+      });
+    }
+  }
+
   function renderHistory(submissions) {
     const cc = c();
     if (!submissions.length) {
@@ -95,12 +155,16 @@
         <h1>${esc(cc.title)}${p.display_name ? ", " + esc(p.display_name) : ""}</h1>
 
         <section class="mvs-section" style="border-top:none;padding-top:4px;">
-          <h2 class="mvs-section-title">${esc(cc.orgHeading)}</h2>
-          <p>
-            <span class="mvs-org-chip">${esc(org ? org.name : "—")}
-              <span class="mvs-role-tag">${esc(roleLabel)}</span>
-            </span>
-          </p>
+          <h2 class="mvs-section-title">${esc(cc.orgsHeading)}</h2>
+          ${renderOrgsList(ctx)}
+          <p class="mvs-message" id="mvs-org-msg" hidden></p>
+          <form class="mvs-auth-form" id="mvs-create-org-form" novalidate style="margin-top:12px;">
+            <label class="mvs-field-label" for="mvs-new-org">${esc(cc.createLabel)}</label>
+            <div class="mvs-form-inline">
+              <input type="text" id="mvs-new-org" class="mvs-text-input" placeholder="${esc(cc.createPlaceholder)}" />
+              <button type="submit" class="mvs-btn mvs-btn--ghost" id="mvs-create-org-btn">${esc(cc.createCta)}</button>
+            </div>
+          </form>
         </section>
 
         <section class="mvs-section">
@@ -175,6 +239,7 @@
 
     wireDetails(ctx);
     wirePassword();
+    wireOrgs();
   }
 
   function msg(id, kind, text) {
