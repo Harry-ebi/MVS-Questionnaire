@@ -110,6 +110,21 @@ const CONTENT = {
     pageTitle: "Admin: all submissions",
     intro:
       "Every result anyone has saved — across every team code — shown together as a table. Sign in with the admin account set up in Supabase to see it.",
+    summary: {
+      heading: "Usage summary",
+      scopeAll: "across all team codes",
+      scopeTeam: (code) => `for team code “${code}”`,
+      empty: "No submissions yet — this fills in as people complete the tool.",
+      tileEveryday: "Everyday reflections",
+      tilePressure: "Under-pressure add-ons",
+      tilePeople: "People",
+      tileTeams: "Teams",
+      lastActivity: (when) => `Most recent activity: ${when}`,
+      byDayHeading: "Completions by day",
+      byDayNote: (n) => `Showing the last ${n} day${n === 1 ? "" : "s"} with activity.`,
+      priorityHeading: "Leading priority (everyday reflections)",
+      priorityNote: "Which area each person's everyday result leans toward most.",
+    },
     internalUseNotice:
       "For internal use only. This tool is an educational self-reflection aid, not a validated assessment — please don't use anything in this table to make hiring, promotion, performance or disciplinary decisions, and don't forward it outside the people directly involved without their knowledge.",
     loginHeading: "Admin sign-in",

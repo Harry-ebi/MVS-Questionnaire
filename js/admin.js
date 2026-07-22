@@ -207,6 +207,126 @@
     setTimeout(() => URL.revokeObjectURL(url), 2000);
   }
 
+  // ------------------------------------------------------------------
+  // Usage summary — computed entirely from the records already loaded
+  // (no extra network calls, no new data captured). Reflects whatever
+  // team-code filter is currently applied, since it's handed the same
+  // `shown` set the table below is.
+  // ------------------------------------------------------------------
+
+  /** The dimension a result leans toward most, from its own percentages. */
+  function topDimension(pct) {
+    if (!pct) return null;
+    let best = DIMENSIONS[0];
+    DIMENSIONS.forEach((d) => {
+      if ((pct[d] || 0) > (pct[best] || 0)) best = d;
+    });
+    return best;
+  }
+
+  /** One horizontal bar row: label · proportional bar · count. */
+  function summaryBarRow(label, count, max, color) {
+    const pct = max > 0 ? Math.round((count / max) * 100) : 0;
+    return `
+      <div class="mvs-usage-bar-row">
+        <span class="mvs-usage-bar-label">${escapeHtml(label)}</span>
+        <span class="mvs-usage-bar-track">
+          <span class="mvs-usage-bar-fill" style="width:${pct}%;background:${color};"></span>
+        </span>
+        <span class="mvs-usage-bar-count">${escapeHtml(count)}</span>
+      </div>
+    `;
+  }
+
+  function renderSummary(shown, teamFilter) {
+    const s = c.summary;
+    const scope = teamFilter && teamFilter.trim() ? s.scopeTeam(teamFilter.trim()) : s.scopeAll;
+
+    if (!shown.length) {
+      return `
+        <section class="mvs-section mvs-print-hide">
+          <h2 class="mvs-section-title">${escapeHtml(s.heading)}</h2>
+          <p class="mvs-note">${escapeHtml(s.empty)}</p>
+        </section>
+      `;
+    }
+
+    const everyday = shown.filter((r) => r.recordType !== "pressure");
+    const pressure = shown.filter((r) => r.recordType === "pressure");
+
+    const uniquePeople = new Set(
+      shown.map((r) => (r.name || "").trim().toLowerCase()).filter(Boolean)
+    ).size;
+    const teams = new Set(
+      shown.map((r) => (r.teamCode || "").trim().toLowerCase()).filter(Boolean)
+    ).size;
+
+    const times = shown.map((r) => (r.exportedAt ? new Date(r.exportedAt).getTime() : 0)).filter((t) => t > 0);
+    const lastActivity = times.length ? formatTimestamp(new Date(Math.max(...times)).toISOString()) : "—";
+
+    // Completions per calendar day (all record types), most recent 30 active days.
+    const dayCounts = {};
+    shown.forEach((r) => {
+      if (!r.exportedAt) return;
+      const d = new Date(r.exportedAt);
+      if (isNaN(d.getTime())) return;
+      const key = d.toISOString().slice(0, 10);
+      dayCounts[key] = (dayCounts[key] || 0) + 1;
+    });
+    const allDays = Object.keys(dayCounts).sort();
+    const days = allDays.slice(-30);
+    const dayMax = days.reduce((m, k) => Math.max(m, dayCounts[k]), 1);
+    const dayLabel = (key) =>
+      new Date(key + "T00:00:00").toLocaleDateString(undefined, { day: "numeric", month: "short" });
+    const byDayBars = days
+      .map((k) => summaryBarRow(dayLabel(k), dayCounts[k], dayMax, "var(--accent-soft)"))
+      .join("");
+
+    // Leading-priority split across everyday reflections.
+    const split = { drive: 0, connection: 0, clarity: 0 };
+    everyday.forEach((r) => {
+      const top = topDimension(r.percentages);
+      if (top) split[top] += 1;
+    });
+    const splitMax = DIMENSIONS.reduce((m, d) => Math.max(m, split[d]), 1);
+    const seriesVar = { drive: "var(--series-drive)", connection: "var(--series-connection)", clarity: "var(--series-clarity)" };
+    const splitBars = DIMENSIONS.map((d) =>
+      summaryBarRow(dimNames[d], split[d], splitMax, seriesVar[d])
+    ).join("");
+
+    const tile = (label, value) => `
+      <div class="mvs-result-summary-card">
+        <p class="mvs-summary-label">${escapeHtml(label)}</p>
+        <p class="mvs-summary-value">${escapeHtml(value)}</p>
+      </div>
+    `;
+
+    return `
+      <section class="mvs-section mvs-print-hide">
+        <h2 class="mvs-section-title">${escapeHtml(s.heading)}</h2>
+        <p class="mvs-note">${escapeHtml(scope)} · ${escapeHtml(s.lastActivity(lastActivity))}</p>
+        <div class="mvs-result-summary-grid mvs-usage-tiles">
+          ${tile(s.tileEveryday, everyday.length)}
+          ${tile(s.tilePressure, pressure.length)}
+          ${tile(s.tilePeople, uniquePeople)}
+          ${tile(s.tileTeams, teams)}
+        </div>
+        <div class="mvs-usage-charts">
+          <div class="mvs-usage-chart">
+            <h3 class="mvs-usage-chart-title">${escapeHtml(s.byDayHeading)}</h3>
+            ${byDayBars}
+            <p class="mvs-note">${escapeHtml(s.byDayNote(days.length))}</p>
+          </div>
+          <div class="mvs-usage-chart">
+            <h3 class="mvs-usage-chart-title">${escapeHtml(s.priorityHeading)}</h3>
+            ${splitBars}
+            <p class="mvs-note">${escapeHtml(s.priorityNote)}</p>
+          </div>
+        </div>
+      </section>
+    `;
+  }
+
   function renderTable(records, totalCount) {
     if (!records.length) {
       return `<p class="mvs-lead">${escapeHtml(totalCount ? c.filterNoMatches : c.tableEmpty)}</p>`;
@@ -368,6 +488,8 @@
 
           ${loadErrorHtml}
           ${deleteErrorHtml}
+
+          ${renderSummary(shown, teamCodeFilter)}
 
           <section class="mvs-section mvs-print-hide">
             <h2 class="mvs-section-title">${escapeHtml(c.loadHeading)}</h2>
