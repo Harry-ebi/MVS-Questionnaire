@@ -1,6 +1,6 @@
 # Ways of Working — a workplace priorities reflection tool
 
-A small web app for ebi: a ~30-question forced-choice reflection tool that
+A small, standalone web app: a ~30-question forced-choice reflection tool that
 gives people a sense of whether their working priorities lean toward
 **Drive**, **Connection** or **Clarity**, inspired by the general idea of
 workplace priorities and how they show up day to day (it is *not* a copy of
@@ -505,7 +505,7 @@ files saved before the database existed, so historical submissions aren't
 lost.
 
 Both the sign-in gate and the main table screen show a clear
-**internal-use notice**: this data is for internal ebi use only, this
+**internal-use notice**: this data is for internal use only, this
 tool is an educational self-reflection aid rather than a validated
 assessment, and it shouldn't be used to make hiring, promotion,
 performance or disciplinary decisions about anyone, or forwarded outside
@@ -586,48 +586,39 @@ second set of tunable thresholds.
 
 ## Brand (`css/styles.css` `:root`)
 
-Colours and type are taken from ebi's own Style Guide (v1 2021), pixel-checked
-against the guide's swatches rather than trusted from its printed hex labels —
-the guide's "Brand Colours" page has a couple of mislabelled hex codes
-(leftover Bootstrap-default text under the right-looking swatches), so the
-values below were sampled directly from the swatch pixels instead:
+The palette is a neutral, standalone navy/blue scheme (no company branding),
+tokenised as role-based CSS custom properties so light + dark mode differ only
+in the `:root` block:
 
-- `--accent` (`#6b5e8b`, Medium Purple), `--accent-soft` (`#8f72b1`,
-  Corporate Purple), `--brand-green` (`#93c467`, Corporate Green),
-  `--text-primary` / `--text-secondary` — already matched the guide closely
-  from earlier work on this app.
-- `--accent-light` (`#a094b7`, Light Purple) and `--accent-deep` (`#4b0f8a`,
-  Dark Purple) were added for the home page's hero band (see below).
+- `--accent` (`#2c5282`, corporate blue — solid buttons), `--accent-soft`
+  (`#2b6cb0`, brighter blue — borders, links, progress fill),
+  `--brand-secondary` (`#3182ce`, secondary blue — logo tall bar, taglines,
+  the header accent line), plus neutral slate `--text-primary` /
+  `--text-secondary`.
+- `--accent-light` (`#bcd6ef`, light blue) and `--accent-deep` (`#1a365d`,
+  deep navy) are used for the home page's hero band (see below).
 - Body font is Nunito Sans (loaded via Google Fonts in every page's
-  `<head>`), matching the guide's specified "Web Font" exactly. The guide's
-  "Corporate Font" (Avenir) is for print/stationery, not relevant here.
+  `<head>`).
 
-The home page's banner (`.mvs-hero-band` in `index.html`) is a deliberate
-callback to the Style Guide's own stationery back-cover treatment (business
-card and letterhead backs, pages 7-8): a solid Dark Purple panel with a
-Light Purple rounded-corner shape overlapping it, white logo on top. Every
-other page keeps a plain, functional header — colour and a thin
-purple-to-green accent line, nothing bolder — since those are working
-screens that need to stay readable (and print cleanly), not a cover page.
+The home page's banner (`.mvs-hero-band` in `index.html`) is a solid deep-navy
+panel with a lighter blue rounded-corner shape overlapping it, white logo on
+top. Every other page keeps a plain, functional header — colour and a thin
+blue accent line, nothing bolder — since those are working screens that need
+to stay readable (and print cleanly), not a cover page.
 Buttons across the app are fully rounded (pill-shaped) rather than
 soft-cornered rectangles, a small nod to the organic, curved shapes used
 throughout the guide's iconography and stationery.
 
 The home page's "My apps" section (`.mvs-tool-grid` / `.mvs-tool-tile`) is
 an icon-tile grid — a colour-coded icon circle, a short title, and a
-one-line hint, on a plain white card — matching the app-launcher pattern
-used on ebi's other internal tools (e.g. the Vault app hub's "My Apps"
-grid), rather than the longer vertical description-cards used in an
-earlier version of this page. An earlier pass used a generic, off-brand
-Bootstrap-style palette here (orange/pink/blue/teal) purely to match the
-*varied-colour look* of those other app launchers; `--tool-reflection` /
-`--tool-team` / `--tool-blindspot` / `--tool-guide` now use ebi's own
-tones instead — Dark Purple, Medium Purple and Corporate Purple (ranked
-darkest-first to match how prominently each tool is placed on the page),
-plus a deeper, print-tested shade of Corporate Green for the guide banner
-below. The icons themselves are small hand-drawn inline SVGs (`ICONS` in
-`index.html`), not a reproduction of ebi's own icon set, which this app
-doesn't have access to.
+one-line hint, on a plain white card — rather than the longer vertical
+description-cards used in an earlier version of this page. `--tool-reflection`
+/ `--tool-team` / `--tool-blindspot` use a navy→blue ramp (deep navy, corporate
+blue, bright blue — ranked darkest-first to match how prominently each tool is
+placed on the page), plus a teal (`--tool-guide`) for the guide banner below,
+which is deliberately set apart from the other three. The icons themselves are
+small hand-drawn inline SVGs (`ICONS` in `index.html`), drawn inline rather
+than pulled from any external icon library.
 
 The tile grid is ordered and weighted by how the tools are actually used:
 **solo reflection** is the main, most-used entry point, so it renders as a
@@ -638,8 +629,8 @@ different priorities") isn't in this grid at all — it's a different kind
 of thing, a reference lookup you can use anytime rather than a one-off
 workflow — so it gets its own distinctly-styled banner
 (`.mvs-guide-banner`) underneath: full-width, a rounded-square icon
-instead of a circle, a small "Reference guide" tag, and the green accent
-instead of the purple ramp, so it visually reads as a different category
+instead of a circle, a small "Reference guide" tag, and a teal accent
+instead of the navy→blue ramp, so it visually reads as a different category
 of tool rather than a fourth equal tile.
 
 The admin entry point (`admin.html`) is a small pill badge in the
@@ -649,7 +640,7 @@ soft-gated page for one person rather than a main flow for everyone. See
 "Admin: all submissions" above for what that sign-in does and doesn't
 protect against.
 
-The ebi logo in every page's header is a link back to `index.html`
+The logo in every page's header is a link back to `index.html`
 (`.mvs-brand-link`, shared markup across `reflection.html`, `guide.html`,
 `guess.html`, `team.html` and `admin.html`) — a small, low-key way to get
 home from anywhere without hunting for the explicit "← Back to home" text

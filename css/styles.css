@@ -9,37 +9,31 @@
 :root {
   --surface-page: #f9f9f7;
   --surface-card: #ffffff;
-  --text-primary: #2a2f33; /* ebi "Primary Text" */
-  --text-secondary: #555f66; /* ebi "Secondary Text" */
+  --text-primary: #2a2f33; /* Primary text — neutral slate */
+  --text-secondary: #555f66; /* Secondary text — neutral slate */
   --text-muted: #82898f;
   --border-hairline: rgba(42, 47, 51, 0.12);
-  --gridline: #e6e2ea;
+  --gridline: #e2e8f0;
 
-  --accent: #6b5e8b; /* ebi "Medium Purple" — solid buttons (good contrast w/ white text) */
-  --accent-soft: #8f72b1; /* ebi "Corporate Purple" — borders, links, progress fill */
-  --accent-light: #a094b7; /* ebi "Light Purple" — subtle tints, hover backgrounds */
-  --accent-deep: #4b0f8a; /* ebi "Dark Purple" — bold brand panels (e.g. the home page hero band), always paired with light/white text */
+  --accent: #2c5282; /* Corporate blue — solid buttons (good contrast w/ white text) */
+  --accent-soft: #2b6cb0; /* Brighter blue — borders, links, progress fill */
+  --accent-light: #bcd6ef; /* Light blue — subtle tints, hover backgrounds */
+  --accent-deep: #1a365d; /* Deep navy — bold brand panels (e.g. the home page hero band), always paired with light/white text */
   --accent-contrast: #ffffff;
-  --brand-green: #93c467; /* ebi "Corporate Green" — secondary brand accent */
+  --brand-secondary: #3182ce; /* Secondary blue accent (logo tall bar, taglines, gradient) */
 
-  /* Tool-tile icon colours — an earlier version borrowed a generic,
-     off-brand Bootstrap-style palette here (orange/pink/blue/teal) to
-     match the varied-colour look of ebi's other internal app launchers
-     (e.g. Vault's "My Apps" grid). Replaced with genuine ebi tones only:
-     a purple ramp (dark → medium → soft) for the three solo/team/
-     blind-spot tools, ranked darkest-first to match their order of
-     prominence on the home page, plus a deeper, print-tested variant of
-     Corporate Green (same value already used for print contrast — see
-     the @media print block below) for the communication guide, since
-     that one is deliberately styled apart from the other three. Fixed
-     hex values rather than var(--accent-soft) etc. on purpose: those
-     tokens shift slightly in dark mode for on-page text/link contrast,
-     but these sit inside solid colour circles and should stay constant
-     in both themes. */
-  --tool-reflection: #4b0f8a; /* ebi "Dark Purple" — the featured/primary tool */
-  --tool-team: #6b5e8b; /* ebi "Medium Purple" */
-  --tool-blindspot: #8f72b1; /* ebi "Corporate Purple" */
-  --tool-guide: #5c9a3c; /* deeper Corporate Green, for contrast with the white icon strokes */
+  /* Tool-tile icon colours — a neutral navy→blue ramp (deep → medium →
+     bright) for the three solo/team/blind-spot tools, ranked darkest-first
+     to match their order of prominence on the home page, plus a teal for
+     the communication guide, which is deliberately styled apart from the
+     other three. Fixed hex values rather than var(--accent-soft) etc. on
+     purpose: those tokens shift slightly in dark mode for on-page
+     text/link contrast, but these sit inside solid colour circles and
+     should stay constant in both themes. */
+  --tool-reflection: #1a365d; /* Deep navy — the featured/primary tool */
+  --tool-team: #2c5282; /* Corporate blue */
+  --tool-blindspot: #3182ce; /* Bright blue */
+  --tool-guide: #2c7a7b; /* Teal, for contrast with the white icon strokes and to set the guide apart */
 
   /* Chart series colours are a separate, deliberately validated system
      (contrast + colour-vision-deficiency checked for the Drive /
@@ -61,20 +55,20 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --surface-page: #19151d;
-    --surface-card: #241d29;
+    --surface-page: #14181d;
+    --surface-card: #1e242c;
     --text-primary: #ffffff;
-    --text-secondary: #c9c2d1;
-    --text-muted: #9b93a3;
+    --text-secondary: #cbd3dc;
+    --text-muted: #97a0aa;
     --border-hairline: rgba(255, 255, 255, 0.12);
-    --gridline: #332b3a;
+    --gridline: #2a303a;
 
-    --accent: #6b5e8b;
-    --accent-soft: #a095b8;
-    --accent-light: #a094b7;
-    --accent-deep: #4b0f8a;
+    --accent: #2c5282;
+    --accent-soft: #7fb0e0;
+    --accent-light: #3a5570;
+    --accent-deep: #1a365d;
     --accent-contrast: #ffffff;
-    --brand-green: #95c985;
+    --brand-secondary: #63b3ed;
 
     --series-drive: #e3a640;
     --series-connection: #c4a3ec;
@@ -107,14 +101,14 @@ body {
   min-height: 100vh;
 }
 
-/* Brand header (ebi logo + wordmark) --------------------------------------- */
+/* Brand header (logo + wordmark) ------------------------------------------- */
 
 .mvs-brand-header {
   max-width: var(--max-width);
   margin: 0 auto;
   padding: 20px 16px 14px;
   border-bottom: 3px solid;
-  border-image: linear-gradient(90deg, var(--accent-soft), var(--brand-green)) 1;
+  border-image: linear-gradient(90deg, var(--accent-soft), var(--brand-secondary)) 1;
 }
 
 /* The logo + wordmark are a link back to the home page on every screen
@@ -142,24 +136,22 @@ body {
 }
 
 /* The logo mark itself: three simple ascending, pill-ended bars — a
-   plain, original growth/analytics glyph (not a reproduction of ebi's
-   own proprietary mark, which this app doesn't have access to), chosen
-   deliberately for how cleanly it reduces: no fine detail, crossing
-   lines or overlapping shapes to lose at a 27px header size, unlike an
-   earlier version of this mark. The two shorter bars pick up the same
-   colour as the "ebi" wordmark next to them; the tallest bar always
-   matches the green tagline underneath it, so the icon and the wordmark
-   read as one deliberately co-ordinated unit rather than two separately
-   coloured elements sitting side by side. */
+   plain, original growth/analytics glyph, chosen deliberately for how
+   cleanly it reduces: no fine detail, crossing lines or overlapping
+   shapes to lose at a 27px header size. The two shorter bars pick up the
+   same blue as the wordmark next to them; the tallest bar uses the
+   secondary blue that matches the tagline underneath it, so the icon and
+   the wordmark read as one deliberately co-ordinated unit rather than two
+   separately coloured elements sitting side by side. */
 .mvs-brand-mark-bar {
   fill: var(--accent-soft);
 }
 
 .mvs-brand-mark-bar--accent {
-  fill: var(--brand-green);
+  fill: var(--brand-secondary);
 }
 
-/* On the home page's dark hero band the mark is always white + green,
+/* On the home page's dark hero band the mark is always white,
    regardless of the app's light/dark theme — the same "fixed tone on a
    fixed-colour surface" approach already used for the hero band's other
    text (see .mvs-hero-word/.mvs-hero-title below), since that panel
@@ -186,12 +178,11 @@ body {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--brand-green);
+  color: var(--brand-secondary);
 }
 
 /* Home hero band ------------------------------------------------------
-   Echoes ebi's own stationery back-cover treatment (Style Guide p.7-8):
-   a bold Dark Purple panel with a Light Purple rounded-corner shape
+   A bold deep-navy panel with a lighter blue rounded-corner shape
    overlapping it, white logo lockup on top. Used only on the home page —
    the "cover" of this little app — while every working screen inside
    keeps a plain, functional header for readability and print. ---------- */
@@ -248,7 +239,10 @@ body {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--brand-green);
+  /* Fixed light blue — the hero band is always the dark navy panel in
+     both themes, so this tagline needs a light tone to stay legible on it
+     (the on-white/on-card --brand-secondary tone would be too dark here). */
+  color: #90cdf4;
 }
 
 .mvs-hero-eyebrow {
@@ -357,9 +351,8 @@ h2 {
 
 /* Any inline text link inside ordinary copy (e.g. "Looking for the team
    overlay or blind-spot exercise instead?") should read as part of this
-   app's own brand palette, not the browser's default blue/purple link
-   colours, which clash badly against the purple/green theme everywhere
-   else on the page. */
+   app's own brand palette, not the browser's default link colours, which
+   clash against the app's blue theme everywhere else on the page. */
 .mvs-meta-line a {
   color: var(--accent-soft);
   font-weight: 700;
@@ -408,7 +401,7 @@ h2 {
 .mvs-quick-reference {
   background: var(--surface-card);
   border: 1px solid var(--border-hairline);
-  border-left: 4px solid var(--brand-green);
+  border-left: 4px solid var(--brand-secondary);
   border-radius: var(--radius-sm);
   padding: 14px 16px;
 }
@@ -1373,10 +1366,9 @@ h2 {
 }
 
 /* Home hub — app-tile grid ------------------------------------------
-   Matches the icon-tile launcher pattern used on ebi's other internal
-   app hubs (e.g. Vault's "My Apps" grid): a colour-coded icon circle,
-   a short label, and a one-line hint, on a plain white card — rather
-   than a vertical list of longer description cards. --------------- */
+   A clean icon-tile launcher pattern: a colour-coded icon circle, a
+   short label, and a one-line hint, on a plain white card — rather than
+   a vertical list of longer description cards. --------------- */
 
 .mvs-tool-grid {
   display: grid;
@@ -1484,8 +1476,8 @@ h2 {
    (an anytime reference lookup, not a one-off workflow like the three
    tiles above), so it's deliberately styled apart from the tile grid:
    a full-width horizontal card, a rounded-square icon rather than a
-   circle, a small tag label, and the green brand accent instead of the
-   purple ramp used for the three tools above. */
+   circle, a small tag label, and a teal accent instead of the navy→blue
+   ramp used for the three tools above. */
 .mvs-guide-banner {
   display: flex;
   align-items: center;
@@ -1600,7 +1592,7 @@ h2 {
 }
 
 .mvs-roster-status--done {
-  color: var(--brand-green);
+  color: var(--brand-secondary);
   font-weight: 600;
 }
 
@@ -1642,11 +1634,11 @@ h2 {
     --text-secondary: #555f66;
     --text-muted: #6b7278;
     --border-hairline: rgba(42, 47, 51, 0.25);
-    --gridline: #d8d4de;
-    --accent: #6b5e8b;
-    --accent-soft: #6b5e8b;
+    --gridline: #dfe3e8;
+    --accent: #2c5282;
+    --accent-soft: #2b6cb0;
     --accent-contrast: #ffffff;
-    --brand-green: #5c9a3c;
+    --brand-secondary: #2c5282;
   }
 
   * {

@@ -40,7 +40,7 @@ const CONTENT = {
       "A short reflection tool on your priorities at work, and three ways to build on it with a team — no accounts, no installs, nothing to set up.",
     whatHeading: "What this is",
     whatBody:
-      "Ways of Working is a short, original self-reflection tool built for ebi. It looks at what drives your day-to-day priorities at work across three broad areas — Drive, Connection and Clarity — and gives you a plain-English write-up of your own pattern, plus a couple of ways to explore that alongside a team.",
+      "Ways of Working is a short, original self-reflection tool. It looks at what drives your day-to-day priorities at work across three broad areas — Drive, Connection and Clarity — and gives you a plain-English write-up of your own pattern, plus a couple of ways to explore that alongside a team.",
     useHeading: "What it's for",
     useBody:
       "Use it to understand your own working priorities, to see how a team's priorities sit alongside each other, or to run a light, low-pressure workshop exercise on perception versus reality. Every result is meant as a starting point for a better conversation, not a final verdict — most people show a mix of all three areas rather than sitting neatly in one box, and that mix can shift with role, team and circumstance.",
@@ -111,7 +111,7 @@ const CONTENT = {
     intro:
       "Every result anyone has saved — across every team code — shown together as a table. Sign in with the admin account set up in Supabase to see it.",
     internalUseNotice:
-      "For internal ebi use only. This tool is an educational self-reflection aid, not a validated assessment — please don't use anything in this table to make hiring, promotion, performance or disciplinary decisions, and don't forward it outside the people directly involved without their knowledge.",
+      "For internal use only. This tool is an educational self-reflection aid, not a validated assessment — please don't use anything in this table to make hiring, promotion, performance or disciplinary decisions, and don't forward it outside the people directly involved without their knowledge.",
     loginHeading: "Admin sign-in",
     loginBody: "Sign in with the admin email and password set up for this tool.",
     emailLabel: "Email",
