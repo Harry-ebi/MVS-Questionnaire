@@ -96,6 +96,19 @@ const CONTENT = {
       setCta: "Save new password",
       setDone: "Password updated. Redirecting you to sign in…",
     },
+    confirm: {
+      workingTitle: "Confirming your email…",
+      workingBody: "One moment while we finish setting up your account.",
+      successTitle: "Email confirmed",
+      successBody: "You're all set and signed in. Welcome to Conversa.",
+      successPrimaryCta: "Start your communication profile",
+      successSecondaryCta: "Go to your account",
+      failTitle: "We couldn't confirm that link",
+      failBody:
+        "The link may have expired or already been used. Try signing in — if that doesn't work, create your account again to get a fresh confirmation email.",
+      failPrimaryCta: "Sign in",
+      failSecondaryCta: "Create account",
+    },
   },
 
   organisation: {

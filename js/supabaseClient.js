@@ -159,9 +159,17 @@ const SupabaseClient = (function () {
    * user awaiting email confirmation, depending on the project's
    * "Confirm email" setting) on success, or null on failure.
    */
-  async function signUp(email, password, metadata) {
+  async function signUp(email, password, metadata, redirectTo) {
     try {
-      const res = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
+      // When email confirmation is on, the confirmation link Supabase emails
+      // redirects the browser to `redirect_to` after verifying. We pass our
+      // own live confirmation page so links never point at localhost. (The
+      // URL must also be on the project's Redirect URLs allow-list, or
+      // Supabase falls back to the dashboard Site URL.)
+      const url = redirectTo
+        ? `${SUPABASE_URL}/auth/v1/signup?redirect_to=${encodeURIComponent(redirectTo)}`
+        : `${SUPABASE_URL}/auth/v1/signup`;
+      const res = await fetch(url, {
         method: "POST",
         headers: { apikey: SUPABASE_PUBLISHABLE_KEY, "Content-Type": "application/json" },
         body: JSON.stringify({ email, password, data: metadata || {} }),

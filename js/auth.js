@@ -130,12 +130,25 @@ const Auth = (function () {
     return { ok: true };
   }
 
+  // The live URL of our email-confirmation landing page, derived from
+  // wherever the app is currently served (works on GitHub Pages and on a
+  // local dev server alike). Supabase redirects here after the person
+  // clicks the confirmation link.
+  function confirmRedirectUrl() {
+    try {
+      const base = window.location.origin + window.location.pathname.replace(/[^/]*$/, "");
+      return base + "confirm.html";
+    } catch (e) {
+      return null;
+    }
+  }
+
   async function register(fields) {
     const meta = {
       first_name: (fields.firstName || "").trim(),
       last_name: (fields.lastName || "").trim(),
     };
-    const res = await SupabaseClient.signUp(fields.email, fields.password, meta);
+    const res = await SupabaseClient.signUp(fields.email, fields.password, meta, confirmRedirectUrl());
     if (!res.ok) return { ok: false, error: res.error };
 
     // If email confirmation is OFF (our current setup), the response
@@ -320,6 +333,48 @@ const Auth = (function () {
     return null;
   }
 
+  /**
+   * Adopt a session handed back in the URL after email confirmation.
+   * Supabase's implicit flow appends the tokens to the redirect URL's hash
+   * (#access_token=…&refresh_token=…). We read them, fetch the user, store
+   * a normal session, and the person is signed in. Returns {ok} / {ok:false,
+   * error}. Used by confirm.html.
+   */
+  async function completeSessionFromHash() {
+    let raw = "";
+    try {
+      raw = (window.location.hash || "").replace(/^#/, "");
+      // Some flows use the query string instead of the hash.
+      if (!raw && window.location.search) raw = window.location.search.replace(/^\?/, "");
+    } catch (e) {
+      /* no location */
+    }
+    const params = new URLSearchParams(raw);
+    const errDesc = params.get("error_description") || params.get("error");
+    if (errDesc) return { ok: false, error: errDesc.replace(/\+/g, " ") };
+
+    const access_token = params.get("access_token");
+    const refresh_token = params.get("refresh_token");
+    if (!access_token) return { ok: false, error: "no_token" };
+
+    const expiresIn = parseInt(params.get("expires_in") || "3600", 10);
+    let user = null;
+    try {
+      user = await SupabaseClient.getUser(access_token);
+    } catch (e) {
+      /* fall through — we can still store the tokens */
+    }
+    const session = {
+      access_token: access_token,
+      refresh_token: refresh_token,
+      expires_at: Math.floor(Date.now() / 1000) + (isFinite(expiresIn) ? expiresIn : 3600),
+      user: user ? { id: user.id, email: user.email } : null,
+    };
+    setSession(session);
+    context = null;
+    return { ok: true };
+  }
+
   return {
     getSession,
     clearSession,
@@ -328,6 +383,7 @@ const Auth = (function () {
     getAccessToken,
     signIn,
     register,
+    completeSessionFromHash,
     signOut,
     requestPasswordReset,
     updatePassword,
